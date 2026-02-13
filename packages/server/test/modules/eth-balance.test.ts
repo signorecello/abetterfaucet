@@ -1,8 +1,22 @@
-import { describe, test, expect, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeEach, mock, afterAll } from "bun:test";
+import { existsSync, readFileSync } from "fs";
+import { resolve } from "path";
 import { EthBalanceModule } from "../../src/lib/modules/eth-balance/module";
+import { encodePublicInputs, resetBackend } from "../../src/lib/modules/eth-balance/verifier";
 import type { StateRootOracle } from "../../src/lib/state-root-oracle";
 import type { PublicInputs } from "../../src/lib/modules/types";
 import { EPOCH_DURATION_SECONDS, MIN_BALANCE_WEI } from "../../src/lib/modules/eth-balance/constants";
+
+const FIXTURE_PATH = resolve(
+  process.cwd(),
+  "packages/circuits/bin/eth_balance/target/test-fixture.json",
+);
+const HAS_FIXTURE = existsSync(FIXTURE_PATH);
+
+function loadFixture() {
+  if (!HAS_FIXTURE) throw new Error("Test fixture not found");
+  return JSON.parse(readFileSync(FIXTURE_PATH, "utf-8"));
+}
 
 function createMockOracle(opts: { validStateRoots?: string[] } = {}): StateRootOracle {
   const validRoots = new Set(opts.validStateRoots ?? ["0xvalidroot"]);
@@ -15,6 +29,10 @@ function createMockOracle(opts: { validStateRoots?: string[] } = {}): StateRootO
     isValidStateRoot: mock((root: string) => Promise.resolve(validRoots.has(root))),
   } as unknown as StateRootOracle;
 }
+
+afterAll(() => {
+  resetBackend();
+});
 
 describe("EthBalanceModule", () => {
   let module: EthBalanceModule;
@@ -170,19 +188,131 @@ describe("EthBalanceModule", () => {
     });
   });
 
-  describe("verifyProof", () => {
-    test("delegates to verifier (throws without Barretenberg)", async () => {
-      const proof = new Uint8Array([1, 2, 3]);
+  describe("encodePublicInputs", () => {
+    test("produces 35 fields", () => {
       const inputs: PublicInputs = {
-        stateRoot: "0xvalidroot",
-        epoch: module.currentEpoch(),
-        minBalance: MIN_BALANCE_WEI.toString(),
-        nullifier: "0xnullifier123",
+        stateRoot: "0x" + "ab".repeat(32),
+        epoch: 2928,
+        minBalance: "10000000000000000",
+        nullifier: "0x" + "cd".repeat(32),
       };
-      // Without MOCK_VERIFIER=true, verifyProof throws because Barretenberg is not integrated
-      await expect(module.verifyProof(proof, inputs)).rejects.toThrow(
-        "Barretenberg verifier not yet integrated",
-      );
+      const fields = encodePublicInputs(inputs);
+      expect(fields.length).toBe(35);
+    });
+
+    test("first 32 fields are individual state root bytes", () => {
+      const stateRoot = "0x01020304050607080910111213141516171819202122232425262728293031ff";
+      const inputs: PublicInputs = {
+        stateRoot,
+        epoch: 1,
+        minBalance: "1",
+        nullifier: "0x01",
+      };
+      const fields = encodePublicInputs(inputs);
+      // First byte is 0x01
+      expect(fields[0]).toBe("0x" + "0".repeat(63) + "1");
+      // Second byte is 0x02
+      expect(fields[1]).toBe("0x" + "0".repeat(63) + "2");
+      // Last state root byte (index 31) is 0xff
+      expect(fields[31]).toBe("0x" + "0".repeat(62) + "ff");
+    });
+
+    test("epoch, minBalance, nullifier are fields 32-34", () => {
+      const inputs: PublicInputs = {
+        stateRoot: "0x" + "00".repeat(32),
+        epoch: 2928,
+        minBalance: "10000000000000000",
+        nullifier: "0x" + "ab".repeat(32),
+      };
+      const fields = encodePublicInputs(inputs);
+      // epoch (field 32): 2928 = 0xb70
+      expect(fields[32]).toBe("0x" + "0".repeat(61) + "b70");
+      // minBalance (field 33): 10000000000000000 = 0x2386f26fc10000
+      expect(fields[33]).toBe("0x" + "0".repeat(50) + "2386f26fc10000");
+      // nullifier (field 34)
+      expect(fields[34]).toBe("0x" + "ab".repeat(32));
+    });
+  });
+
+  describe("verifyProof (real Barretenberg)", () => {
+    const describeIfFixture = HAS_FIXTURE ? describe : describe.skip;
+
+    describeIfFixture("with test fixture", () => {
+      test("verifies a valid proof", async () => {
+        const fixture = loadFixture();
+        const proofHex: string = fixture.proof;
+        const proofBytes = new Uint8Array(
+          proofHex
+            .slice(2)
+            .match(/.{1,2}/g)!
+            .map((b: string) => parseInt(b, 16)),
+        );
+
+        const fixtureOracle = createMockOracle({
+          validStateRoots: [fixture.stateRoot],
+        });
+        const fixtureModule = new EthBalanceModule(fixtureOracle);
+
+        const result = await fixtureModule.verifyProof(proofBytes, {
+          stateRoot: fixture.stateRoot,
+          epoch: fixture.epoch,
+          minBalance: fixture.minBalance,
+          nullifier: fixture.nullifier,
+        });
+        expect(result).toBe(true);
+      });
+
+      test("rejects a tampered proof", async () => {
+        const fixture = loadFixture();
+        const proofHex: string = fixture.proof;
+        const proofBytes = new Uint8Array(
+          proofHex
+            .slice(2)
+            .match(/.{1,2}/g)!
+            .map((b: string) => parseInt(b, 16)),
+        );
+
+        // Tamper with a byte in the middle of the proof
+        proofBytes[Math.floor(proofBytes.length / 2)] ^= 0xff;
+
+        const fixtureOracle = createMockOracle({
+          validStateRoots: [fixture.stateRoot],
+        });
+        const fixtureModule = new EthBalanceModule(fixtureOracle);
+
+        const result = await fixtureModule.verifyProof(proofBytes, {
+          stateRoot: fixture.stateRoot,
+          epoch: fixture.epoch,
+          minBalance: fixture.minBalance,
+          nullifier: fixture.nullifier,
+        });
+        expect(result).toBe(false);
+      });
+
+      test("rejects with tampered public input", async () => {
+        const fixture = loadFixture();
+        const proofHex: string = fixture.proof;
+        const proofBytes = new Uint8Array(
+          proofHex
+            .slice(2)
+            .match(/.{1,2}/g)!
+            .map((b: string) => parseInt(b, 16)),
+        );
+
+        const fixtureOracle = createMockOracle({
+          validStateRoots: [fixture.stateRoot],
+        });
+        const fixtureModule = new EthBalanceModule(fixtureOracle);
+
+        // Tamper with epoch (change to epoch + 1)
+        const result = await fixtureModule.verifyProof(proofBytes, {
+          stateRoot: fixture.stateRoot,
+          epoch: fixture.epoch + 1,
+          minBalance: fixture.minBalance,
+          nullifier: fixture.nullifier,
+        });
+        expect(result).toBe(false);
+      });
     });
   });
 });

@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { readFileSync, existsSync } from "fs";
+import { resolve } from "path";
 import type { ModuleRegistry } from "../lib/modules/registry";
 import type { FundDispatcher } from "../lib/fund-dispatcher";
 import { AppError } from "../util/errors";
@@ -36,11 +38,25 @@ export function createCircuitsRouter(deps: CircuitsDeps): Hono {
       throw AppError.notFound(`Module ${moduleId}`);
     }
 
-    // Circuit artifacts are produced by the circuits package compilation step.
-    // Until compiled, we return 404 with instructions.
-    throw AppError.notFound(
-      `Circuit artifact for ${moduleId}. Run 'bun run compile:circuits' to generate artifacts.`,
-    );
+    if (moduleId !== "eth-balance") {
+      throw AppError.notFound(`Circuit artifact for ${moduleId}`);
+    }
+
+    const artifactPath =
+      process.env.CIRCUIT_ARTIFACT_PATH ??
+      resolve(
+        process.cwd(),
+        "packages/circuits/bin/eth_balance/target/eth_balance.json",
+      );
+
+    if (!existsSync(artifactPath)) {
+      throw AppError.notFound(
+        `Circuit artifact not found at ${artifactPath}. Run 'nargo compile' to generate it.`,
+      );
+    }
+
+    const artifact = readFileSync(artifactPath, "utf-8");
+    return c.json(JSON.parse(artifact));
   });
 
   return app;

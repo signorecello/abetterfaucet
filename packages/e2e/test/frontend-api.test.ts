@@ -13,8 +13,8 @@ import {
 } from "../../server/src/routes/circuits";
 import { AppError } from "../../server/src/util/errors";
 import {
-  VALID_STATE_ROOT,
-  VALID_PROOF,
+  getValidStateRoot,
+  getValidProof,
   TEST_RECIPIENT,
   TEST_NETWORK,
   MODULE_ID,
@@ -23,21 +23,19 @@ import {
   uniqueNullifier,
 } from "./helpers/fixtures";
 
-// Enable mock verifier
 process.env.NODE_ENV = "test";
-process.env.MOCK_VERIFIER = "true";
 
 // --- Mocks (same pattern as setup.ts) ---
 
 class MockStateRootOracle {
   private validRoots: Set<string>;
-  constructor(validRoots: string[] = [VALID_STATE_ROOT]) {
+  constructor(validRoots: string[] = [getValidStateRoot()]) {
     this.validRoots = new Set(validRoots);
   }
   async start() {}
   stop() {}
   async getLatestStateRoot() {
-    return { blockNumber: 1000n, stateRoot: VALID_STATE_ROOT };
+    return { blockNumber: 1000n, stateRoot: getValidStateRoot() };
   }
   async isValidStateRoot(stateRoot: string): Promise<boolean> {
     return this.validRoots.has(stateRoot);
@@ -99,6 +97,10 @@ function startFullTestServer(): FullTestServer {
     epochDuration: 604_800,
     minBalance: 10_000_000_000_000_000n,
   });
+  // Mock verifyProof at module level (no real Barretenberg in frontend API tests)
+  (module as any).verifyProof = async (proof: Uint8Array, _inputs: any) => {
+    return proof.length > 0;
+  };
   registry.register(module);
 
   const nullifierStore = new NullifierStore(":memory:");

@@ -8,6 +8,8 @@
     "start": "bun --env-file=../../.env src/index.ts"
   },
   "dependencies": {
+    "@aztec/bb.js": "^2.1.11",
+    "@noir-lang/types": "^1.0.0-beta.18",
     "hono": "^4.4.0",
     "viem": "^2.17.0",
     "valibot": "^1.0.0",

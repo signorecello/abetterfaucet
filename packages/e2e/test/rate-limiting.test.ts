@@ -5,19 +5,18 @@ import { EthBalanceModule } from "../../server/src/lib/modules/eth-balance/modul
 import { NullifierStore } from "../../server/src/lib/nullifier-store";
 import { createClaimRouter, claimRecords } from "../../server/src/routes/claim";
 import { AppError } from "../../server/src/util/errors";
-import { claimBody, uniqueNullifier, VALID_STATE_ROOT } from "./helpers/fixtures";
+import { claimBody, uniqueNullifier, getValidStateRoot } from "./helpers/fixtures";
 
 process.env.NODE_ENV = "test";
-process.env.MOCK_VERIFIER = "true";
 
 class MockStateRootOracle {
   async start() {}
   stop() {}
   async getLatestStateRoot() {
-    return { blockNumber: 1000n, stateRoot: VALID_STATE_ROOT };
+    return { blockNumber: 1000n, stateRoot: getValidStateRoot() };
   }
   async isValidStateRoot(stateRoot: string): Promise<boolean> {
-    return stateRoot === VALID_STATE_ROOT;
+    return stateRoot === getValidStateRoot();
   }
 }
 
@@ -61,6 +60,10 @@ function buildRateLimitedServer() {
     epochDuration: 604_800,
     minBalance: 10_000_000_000_000_000n,
   });
+  // Mock verifyProof at module level (no real Barretenberg in rate limit tests)
+  (module as any).verifyProof = async (proof: Uint8Array, _inputs: any) => {
+    return proof.length > 0;
+  };
   registry.register(module);
 
   const nullifierStore = new NullifierStore(":memory:");

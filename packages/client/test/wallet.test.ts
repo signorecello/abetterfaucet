@@ -3,6 +3,7 @@ import {
   deriveAddress,
   signDomainMessage,
   DOMAIN_MESSAGE,
+  EPOCH_PAD_LENGTH,
 } from "../src/wallet";
 import type { Hex } from "viem";
 
@@ -69,8 +70,9 @@ describe("wallet", () => {
       const vByte = sig.v.toString(16).padStart(2, "0");
       const fullSig = `0x${rBytes}${sBytes}${vByte}` as Hex;
 
+      const epochStr = epoch.toString().padStart(EPOCH_PAD_LENGTH, "0");
       const recovered = await recoverMessageAddress({
-        message: `${DOMAIN_MESSAGE}:${epoch}`,
+        message: `${DOMAIN_MESSAGE}:${epochStr}`,
         signature: fullSig,
       });
 

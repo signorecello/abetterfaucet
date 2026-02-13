@@ -9,7 +9,10 @@
  *   - A mock StateRootOracle that returns our test state root
  *   - A mock FundDispatcher that returns fake tx hashes
  *
- * The mock verifier is enabled via NODE_ENV=test + MOCK_VERIFIER=true.
+ * When a real proof fixture exists (from `bun run eth_balance:prove`),
+ * the verifier uses real Barretenberg verification. Otherwise, the
+ * module's verifyProof is mocked to accept any non-empty proof so the
+ * HTTP flow can still be tested.
  */
 
 import { Hono } from "hono";
@@ -19,11 +22,9 @@ import { NullifierStore } from "../../../server/src/lib/nullifier-store";
 import { createClaimRouter, claimRecords } from "../../../server/src/routes/claim";
 import { createStatusRouter } from "../../../server/src/routes/status";
 import { AppError } from "../../../server/src/util/errors";
-import { VALID_STATE_ROOT } from "./fixtures";
+import { getValidStateRoot, HAS_REAL_FIXTURE } from "./fixtures";
 
-// Enable mock verifier
 process.env.NODE_ENV = "test";
-process.env.MOCK_VERIFIER = "true";
 
 // ---- Mock StateRootOracle ----
 
@@ -34,7 +35,7 @@ process.env.MOCK_VERIFIER = "true";
 class MockStateRootOracle {
   private validRoots: Set<string>;
 
-  constructor(validRoots: string[] = [VALID_STATE_ROOT]) {
+  constructor(validRoots: string[] = [getValidStateRoot()]) {
     this.validRoots = new Set(validRoots);
   }
 
@@ -42,7 +43,7 @@ class MockStateRootOracle {
   stop() {}
 
   async getLatestStateRoot() {
-    return { blockNumber: 1000n, stateRoot: VALID_STATE_ROOT };
+    return { blockNumber: 1000n, stateRoot: getValidStateRoot() };
   }
 
   async isValidStateRoot(stateRoot: string): Promise<boolean> {
@@ -112,6 +113,8 @@ export interface TestServer {
   baseUrl: string;
   /** The current epoch as computed by the EthBalanceModule */
   currentEpoch: number;
+  /** Whether real proof verification is enabled */
+  hasRealVerification: boolean;
   /** Stop the server and clean up */
   close: () => void;
 }
@@ -128,6 +131,15 @@ export function startTestServer(): TestServer {
     epochDuration: 604_800,
     minBalance: 10_000_000_000_000_000n,
   });
+
+  // If no real proof fixture, mock verifyProof at the module level
+  // so E2E HTTP flow tests still work without Barretenberg.
+  if (!HAS_REAL_FIXTURE) {
+    (module as any).verifyProof = async (proof: Uint8Array, _inputs: any) => {
+      return proof.length > 0;
+    };
+  }
+
   registry.register(module);
 
   const nullifierStore = new NullifierStore(":memory:");
@@ -171,6 +183,7 @@ export function startTestServer(): TestServer {
   return {
     baseUrl,
     currentEpoch,
+    hasRealVerification: HAS_REAL_FIXTURE,
     close: () => {
       server.stop(true);
       nullifierStore.close();

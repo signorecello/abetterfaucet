@@ -5,10 +5,9 @@ import { NullifierStore } from "../../server/src/lib/nullifier-store";
 import { createClaimRouter, claimRecords } from "../../server/src/routes/claim";
 import { AppError } from "../../server/src/util/errors";
 import type { ProofModule, PublicInputs, ValidationResult } from "../../server/src/lib/modules/types";
-import { VALID_STATE_ROOT, VALID_PROOF, TEST_RECIPIENT, TEST_NETWORK, MIN_BALANCE_WEI, uniqueNullifier } from "./helpers/fixtures";
+import { getValidStateRoot, getValidProof, TEST_RECIPIENT, TEST_NETWORK, MIN_BALANCE_WEI, uniqueNullifier } from "./helpers/fixtures";
 
 process.env.NODE_ENV = "test";
-process.env.MOCK_VERIFIER = "true";
 
 function createMockModule(id: string, epochDuration: number = 604_800): ProofModule {
   return {
@@ -94,9 +93,9 @@ describe("Cross-module nullifier isolation", () => {
   function makeClaimBody(moduleId: string, nullifier: string) {
     return {
       moduleId,
-      proof: VALID_PROOF,
+      proof: getValidProof(),
       publicInputs: {
-        stateRoot: VALID_STATE_ROOT,
+        stateRoot: getValidStateRoot(),
         epoch: currentEpoch,
         minBalance: MIN_BALANCE_WEI,
         nullifier,

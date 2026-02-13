@@ -14,17 +14,24 @@ import { EPOCH_DURATION_SECONDS } from "./epoch";
 /** Domain message template used for nullifier derivation */
 export const DOMAIN_MESSAGE = "zk_faucet_v1:eth-balance:nullifier_seed";
 
+/** Epoch is zero-padded to this many digits for fixed-length domain message. */
+export const EPOCH_PAD_LENGTH = 10;
+
 /**
- * Signs the domain message concatenated with epoch info using the private key.
+ * Signs the domain message concatenated with zero-padded epoch using the private key.
  * The signature is used to recover the public key for nullifier derivation:
  *   nullifier = poseidon2(pubkey_x, pubkey_y, epoch)
+ *
+ * The epoch is zero-padded to EPOCH_PAD_LENGTH digits to produce a fixed-length
+ * message that the circuit can verify in-circuit via keccak256.
  */
 export async function signDomainMessage(
   privateKey: Hex,
   epoch: number,
 ): Promise<{ r: Hex; s: Hex; v: number }> {
   const account = privateKeyToAccount(privateKey);
-  const message = `${DOMAIN_MESSAGE}:${epoch}`;
+  const epochStr = epoch.toString().padStart(EPOCH_PAD_LENGTH, "0");
+  const message = `${DOMAIN_MESSAGE}:${epochStr}`;
   const signature = await account.signMessage({ message });
 
   // Parse the 65-byte signature: r (32) + s (32) + v (1)
