@@ -11,8 +11,8 @@ import type { PublicInputs } from "../types";
 const CIRCUIT_ARTIFACT_PATH =
   process.env.CIRCUIT_ARTIFACT_PATH ??
   resolve(
-    process.cwd(),
-    "packages/circuits/bin/eth_balance/target/eth_balance.json",
+    import.meta.dir,
+    "../../../../../circuits/bin/eth_balance/target/eth_balance.json",
   );
 
 /** Cached backend singleton -- initialized lazily on first verification. */
@@ -68,11 +68,8 @@ export function encodePublicInputs(inputs: PublicInputs): string[] {
   // minBalance as field
   fields.push("0x" + BigInt(inputs.minBalance).toString(16).padStart(64, "0"));
 
-  // nullifier as field
-  const nullifierHex = inputs.nullifier.startsWith("0x")
-    ? inputs.nullifier.slice(2)
-    : inputs.nullifier;
-  fields.push("0x" + nullifierHex.padStart(64, "0"));
+  // nullifier as field (handles both decimal and hex string formats)
+  fields.push("0x" + BigInt(inputs.nullifier).toString(16).padStart(64, "0"));
 
   return fields; // 35 fields total
 }

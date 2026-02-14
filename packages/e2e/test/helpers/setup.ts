@@ -132,13 +132,13 @@ export function startTestServer(): TestServer {
     minBalance: 10_000_000_000_000_000n,
   });
 
-  // If no real proof fixture, mock verifyProof at the module level
-  // so E2E HTTP flow tests still work without Barretenberg.
-  if (!HAS_REAL_FIXTURE) {
-    (module as any).verifyProof = async (proof: Uint8Array, _inputs: any) => {
-      return proof.length > 0;
-    };
-  }
+  // Always mock verifyProof at the module level for E2E tests.
+  // E2E tests exercise HTTP routing, validation, rate limiting, and nullifier
+  // dedup -- each test uses unique nullifiers that won't match a real proof.
+  // Real Barretenberg verification is covered by server unit tests.
+  (module as any).verifyProof = async (proof: Uint8Array, _inputs: any) => {
+    return proof.length > 0;
+  };
 
   registry.register(module);
 

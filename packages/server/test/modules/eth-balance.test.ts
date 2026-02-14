@@ -8,8 +8,8 @@ import type { PublicInputs } from "../../src/lib/modules/types";
 import { EPOCH_DURATION_SECONDS, MIN_BALANCE_WEI } from "../../src/lib/modules/eth-balance/constants";
 
 const FIXTURE_PATH = resolve(
-  process.cwd(),
-  "packages/circuits/bin/eth_balance/target/test-fixture.json",
+  import.meta.dir,
+  "../../../circuits/bin/eth_balance/target/test-fixture.json",
 );
 const HAS_FIXTURE = existsSync(FIXTURE_PATH);
 
@@ -237,82 +237,95 @@ describe("EthBalanceModule", () => {
   describe("verifyProof (real Barretenberg)", () => {
     const describeIfFixture = HAS_FIXTURE ? describe : describe.skip;
 
+    // WASM backend init + verification takes ~10-15s on first call
     describeIfFixture("with test fixture", () => {
-      test("verifies a valid proof", async () => {
-        const fixture = loadFixture();
-        const proofHex: string = fixture.proof;
-        const proofBytes = new Uint8Array(
-          proofHex
-            .slice(2)
-            .match(/.{1,2}/g)!
-            .map((b: string) => parseInt(b, 16)),
-        );
+      test(
+        "verifies a valid proof",
+        async () => {
+          const fixture = loadFixture();
+          const proofHex: string = fixture.proof;
+          const proofBytes = new Uint8Array(
+            proofHex
+              .slice(2)
+              .match(/.{1,2}/g)!
+              .map((b: string) => parseInt(b, 16)),
+          );
 
-        const fixtureOracle = createMockOracle({
-          validStateRoots: [fixture.stateRoot],
-        });
-        const fixtureModule = new EthBalanceModule(fixtureOracle);
+          const fixtureOracle = createMockOracle({
+            validStateRoots: [fixture.stateRoot],
+          });
+          const fixtureModule = new EthBalanceModule(fixtureOracle);
 
-        const result = await fixtureModule.verifyProof(proofBytes, {
-          stateRoot: fixture.stateRoot,
-          epoch: fixture.epoch,
-          minBalance: fixture.minBalance,
-          nullifier: fixture.nullifier,
-        });
-        expect(result).toBe(true);
-      });
+          const result = await fixtureModule.verifyProof(proofBytes, {
+            stateRoot: fixture.stateRoot,
+            epoch: fixture.epoch,
+            minBalance: fixture.minBalance,
+            nullifier: fixture.nullifier,
+          });
+          expect(result).toBe(true);
+        },
+        30_000,
+      );
 
-      test("rejects a tampered proof", async () => {
-        const fixture = loadFixture();
-        const proofHex: string = fixture.proof;
-        const proofBytes = new Uint8Array(
-          proofHex
-            .slice(2)
-            .match(/.{1,2}/g)!
-            .map((b: string) => parseInt(b, 16)),
-        );
+      test(
+        "rejects a tampered proof",
+        async () => {
+          const fixture = loadFixture();
+          const proofHex: string = fixture.proof;
+          const proofBytes = new Uint8Array(
+            proofHex
+              .slice(2)
+              .match(/.{1,2}/g)!
+              .map((b: string) => parseInt(b, 16)),
+          );
 
-        // Tamper with a byte in the middle of the proof
-        proofBytes[Math.floor(proofBytes.length / 2)] ^= 0xff;
+          // Tamper with a byte in the middle of the proof
+          proofBytes[Math.floor(proofBytes.length / 2)] ^= 0xff;
 
-        const fixtureOracle = createMockOracle({
-          validStateRoots: [fixture.stateRoot],
-        });
-        const fixtureModule = new EthBalanceModule(fixtureOracle);
+          const fixtureOracle = createMockOracle({
+            validStateRoots: [fixture.stateRoot],
+          });
+          const fixtureModule = new EthBalanceModule(fixtureOracle);
 
-        const result = await fixtureModule.verifyProof(proofBytes, {
-          stateRoot: fixture.stateRoot,
-          epoch: fixture.epoch,
-          minBalance: fixture.minBalance,
-          nullifier: fixture.nullifier,
-        });
-        expect(result).toBe(false);
-      });
+          const result = await fixtureModule.verifyProof(proofBytes, {
+            stateRoot: fixture.stateRoot,
+            epoch: fixture.epoch,
+            minBalance: fixture.minBalance,
+            nullifier: fixture.nullifier,
+          });
+          expect(result).toBe(false);
+        },
+        30_000,
+      );
 
-      test("rejects with tampered public input", async () => {
-        const fixture = loadFixture();
-        const proofHex: string = fixture.proof;
-        const proofBytes = new Uint8Array(
-          proofHex
-            .slice(2)
-            .match(/.{1,2}/g)!
-            .map((b: string) => parseInt(b, 16)),
-        );
+      test(
+        "rejects with tampered public input",
+        async () => {
+          const fixture = loadFixture();
+          const proofHex: string = fixture.proof;
+          const proofBytes = new Uint8Array(
+            proofHex
+              .slice(2)
+              .match(/.{1,2}/g)!
+              .map((b: string) => parseInt(b, 16)),
+          );
 
-        const fixtureOracle = createMockOracle({
-          validStateRoots: [fixture.stateRoot],
-        });
-        const fixtureModule = new EthBalanceModule(fixtureOracle);
+          const fixtureOracle = createMockOracle({
+            validStateRoots: [fixture.stateRoot],
+          });
+          const fixtureModule = new EthBalanceModule(fixtureOracle);
 
-        // Tamper with epoch (change to epoch + 1)
-        const result = await fixtureModule.verifyProof(proofBytes, {
-          stateRoot: fixture.stateRoot,
-          epoch: fixture.epoch + 1,
-          minBalance: fixture.minBalance,
-          nullifier: fixture.nullifier,
-        });
-        expect(result).toBe(false);
-      });
+          // Tamper with epoch (change to epoch + 1)
+          const result = await fixtureModule.verifyProof(proofBytes, {
+            stateRoot: fixture.stateRoot,
+            epoch: fixture.epoch + 1,
+            minBalance: fixture.minBalance,
+            nullifier: fixture.nullifier,
+          });
+          expect(result).toBe(false);
+        },
+        30_000,
+      );
     });
   });
 });

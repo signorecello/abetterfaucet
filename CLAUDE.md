@@ -7,7 +7,7 @@ Privacy-preserving testnet faucet using ZK storage proofs. Users prove they hold
 ```bash
 bun install                # install deps
 bun run dev                # build frontend + start server (watch mode)
-bun run test               # run all tests (178 total, 3 skip without proof fixture)
+bun run test               # run all tests (181 total)
 ```
 
 ## Project Structure
