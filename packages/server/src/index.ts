@@ -87,8 +87,15 @@ const dispatcher = new FundDispatcher(networks, config.faucetPrivateKey, logger)
 // --- Build Hono app ---
 const app = new Hono();
 
-// Rate limiting middleware
+// COOP/COEP headers for multi-threaded WASM (required by @aztec/bb.js SharedArrayBuffer)
 app.use("*", async (c, next) => {
+  await next();
+  c.header("Cross-Origin-Opener-Policy", "same-origin");
+  c.header("Cross-Origin-Embedder-Policy", "require-corp");
+});
+
+// Rate limiting middleware (only applies to /claim)
+app.use("/claim", async (c, next) => {
   const key = getRateLimitKey(c);
   const now = Date.now();
 
@@ -134,9 +141,9 @@ app.route("/networks", createNetworksRouter({ registry, dispatcher, startTime })
 app.route("/health", createHealthRouter({ registry, dispatcher, startTime }));
 
 // --- Serve frontend static files ---
-const frontendDir = new URL("../../frontend/public", import.meta.url).pathname;
+const frontendDir = new URL("../../frontend/dist", import.meta.url).pathname;
 
-app.use("/public/*", serveStatic({ root: frontendDir, rewriteRequestPath: (path) => path.replace(/^\/public/, "") }));
+app.use("/assets/*", serveStatic({ root: frontendDir }));
 
 app.get("/", async (c) => {
   const file = Bun.file(`${frontendDir}/index.html`);

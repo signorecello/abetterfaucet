@@ -1,4 +1,4 @@
-import { parseEther, type Hex, type Address, isAddress } from "viem";
+import { type Hex, type Address, isAddress } from "viem";
 import { getCurrentEpoch, getEpochBounds } from "./epoch";
 import { signDomainMessage, fetchStorageProof, getBalance, deriveAddress } from "./wallet";
 import { loadCircuitArtifact, generateProof } from "./prove";
@@ -11,7 +11,7 @@ import type {
   ProofInputs,
 } from "./types";
 
-const MIN_BALANCE = parseEther("0.01");
+const MIN_BALANCE = BigInt(process.env.VITE_MIN_BALANCE_WEI ?? (() => { throw new Error("Missing VITE_MIN_BALANCE_WEI env var"); })());
 const DEFAULT_MODULE = "eth-balance";
 
 function env(name: string, fallback?: string): string {

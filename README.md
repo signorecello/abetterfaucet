@@ -1,8 +1,8 @@
 # zk_faucet
 
-A privacy-preserving testnet faucet that uses zero-knowledge storage proofs to verify Ethereum mainnet balances without revealing user identity.
+A privacy-preserving testnet faucet that uses zero-knowledge storage proofs to verify ETH balances on a configurable origin chain without revealing user identity.
 
-Users prove they hold at least 0.01 ETH on Ethereum mainnet by generating a ZK proof over their account's Merkle-Patricia Trie (MPT) inclusion in the state trie. The faucet server verifies the proof and sends testnet ETH to a completely separate recipient address. At no point does the server learn which mainnet address generated the proof.
+Users prove they hold sufficient ETH on the origin chain (configured via `VITE_ORIGIN_CHAINID`) by generating a ZK proof over their account's Merkle-Patricia Trie (MPT) inclusion in the state trie. The faucet server verifies the proof and sends testnet ETH to a completely separate recipient address. At no point does the server learn which address generated the proof.
 
 ## Table of Contents
 
@@ -23,10 +23,10 @@ Users prove they hold at least 0.01 ETH on Ethereum mainnet by generating a ZK p
 
 ## How It Works
 
-1. The user connects their mainnet wallet and signs an epoch-specific domain message.
+1. The user connects their wallet (switched to the origin chain) and signs an epoch-specific domain message.
 2. A ZK proof is generated client-side proving:
    - The user controls an Ethereum private key (via ECDSA signature verification).
-   - The corresponding address holds at least 0.01 ETH (via MPT storage proof against a recent state root).
+   - The corresponding address holds sufficient ETH (via MPT storage proof against a recent state root).
    - A deterministic nullifier derived from the public key and current epoch.
 3. The proof is submitted to the faucet server along with the desired testnet recipient address.
 4. The server verifies the proof cryptographically (UltraHonk via Barretenberg WASM), checks the nullifier has not been spent in this epoch, validates the state root is recent (within 256 blocks), and dispatches testnet ETH.
@@ -88,7 +88,7 @@ ZK Proof Generation (client-side):
 | `packages/circuits` | Noir ZK circuit (`eth_balance`) with custom Ethereum MPT verification library |
 | `packages/server` | Hono API server with real Barretenberg proof verification (Bun runtime) |
 | `packages/client` | CLI tool for wallet interaction, epoch queries, and proof generation |
-| `packages/frontend` | Vanilla TypeScript/CSS single-page app with MetaMask integration |
+| `packages/frontend` | Vanilla TypeScript/CSS SPA with wallet integration (Vite build, wagmi/core) |
 | `packages/e2e` | End-to-end integration tests with in-process test server |
 
 ### Claim Flow (Server-Side)
@@ -131,7 +131,7 @@ Verifies a Merkle-Patricia Trie inclusion proof against the public `state_root`,
 
 ### Constraint 5: Balance Check
 
-Asserts `verified_balance >= min_balance` where `min_balance` is a public input (set to 0.01 ETH = 10^16 wei).
+Asserts `verified_balance >= min_balance` where `min_balance` is a public input (configured via `VITE_MIN_BALANCE_WEI`).
 
 ### Constraint 6: Nullifier Derivation
 
@@ -215,7 +215,9 @@ Edit `.env` and set the required values:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ORIGIN_RPC_URL` | **Yes** | -- | Ethereum mainnet RPC URL (used for balance proofs and state root verification) |
+| `VITE_ORIGIN_CHAINID` | **Yes** | -- | Origin chain ID: `1` (mainnet), `11155111` (sepolia), `17000` (holesky). Shared by frontend (Vite build-time) and all packages. |
+| `VITE_MIN_BALANCE_WEI` | **Yes** | -- | Minimum balance threshold in wei. Shared by frontend (Vite build-time) and all packages. |
+| `ORIGIN_RPC_URL` | **Yes** | -- | Origin chain RPC URL (server-only, used for state root verification; never exposed to browser) |
 | `FAUCET_PRIVATE_KEY` | **Yes** | -- | 0x-prefixed private key of the wallet holding testnet funds |
 | `PORT` | No | `3000` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
@@ -224,7 +226,6 @@ Edit `.env` and set the required values:
 | `RATE_LIMIT_WINDOW_MS` | No | `60000` | Rate limit window in ms |
 | `DISPENSATION_AMOUNT` | No | `0.1` | Testnet ETH to send per claim (in ETH) |
 | `EPOCH_DURATION` | No | `604800` | Epoch length in seconds (default: 1 week) |
-| `MIN_BALANCE_WEI` | No | `10000000000000000` | Minimum mainnet balance (0.01 ETH in wei) |
 | `DB_PATH` | No | `./data/nullifiers.db` | SQLite database path for nullifiers |
 
 #### Per-Network RPC Overrides
@@ -248,8 +249,8 @@ For circuit scripts, you also need:
 
 | Variable | Context | Description |
 |----------|---------|-------------|
-| `PRIVATE_KEY` | Circuit scripts | 0x-prefixed mainnet private key (the address to prove balance for) |
-| `ORIGIN_RPC_URL` | Circuit scripts | Ethereum mainnet RPC URL (used by `generate_prover_toml.ts`) |
+| `PRIVATE_KEY` | Circuit scripts | 0x-prefixed private key (the address to prove balance for) |
+| `ORIGIN_RPC_URL` | Circuit scripts | Origin chain RPC URL (used by `generate_prover_toml.ts`) |
 
 ### Compile the Circuit
 
@@ -267,7 +268,7 @@ This produces `target/eth_balance.json`, required by both the server (for proof 
 ```bash
 bun install
 cp .env.example .env
-# Edit .env with your ORIGIN_RPC_URL and FAUCET_PRIVATE_KEY
+# Edit .env with VITE_ORIGIN_CHAINID, VITE_MIN_BALANCE_WEI, ORIGIN_RPC_URL, and FAUCET_PRIVATE_KEY
 bun run dev
 # Open http://localhost:3000
 ```
@@ -334,7 +335,7 @@ The `claim` command performs the full flow: derive address, check balance, sign 
 
 ## Testing
 
-173 tests total across all packages.
+170 tests total across all packages (Bun tests; circuit tests run separately via Nargo).
 
 ### Run All Tests
 
@@ -348,7 +349,7 @@ bun run test
 # Server unit tests (66 tests)
 cd packages/server && bun test
 
-# Client unit tests (38 tests)
+# Client unit tests (35 tests)
 cd packages/client && bun test
 
 # Circuit tests via Nargo (14 tests across 2 crates)
@@ -496,7 +497,7 @@ List available proof modules and the current epoch.
     {
       "id": "eth-balance",
       "name": "ETH Balance Proof",
-      "description": "Proves ownership of >= 0.01 ETH on Ethereum mainnet without revealing the address",
+      "description": "Proves ownership of sufficient ETH on the origin chain without revealing the address",
       "currentEpoch": 2928,
       "epochDurationSeconds": 604800
     }
@@ -571,7 +572,7 @@ This library has no external dependencies beyond `keccak256`. It was written fro
 | `MAX_ACCOUNT_STATE_LEN` | 110 bytes | Maximum size of an RLP-encoded account state |
 | `MAX_ACCOUNT_DEPTH` | 10 | Maximum MPT proof depth (internal nodes only) |
 | `MAX_PREFIXED_KEY_LEN` | 66 bytes | Left-padded keccak256(address) key buffer |
-| `MIN_BALANCE_WEI` | 10^16 (0.01 ETH) | Default minimum balance threshold |
+| `VITE_MIN_BALANCE_WEI` | (from env) | Minimum balance threshold, shared across all packages |
 | `EPOCH_DURATION_SECONDS` | 604,800 (1 week) | Default epoch length |
 | `MAX_STATE_ROOT_AGE_BLOCKS` | 256 | Maximum age of accepted state roots |
 | `EPOCH_PAD_LENGTH` | 10 | Digits used for zero-padded epoch in domain message |
@@ -683,7 +684,7 @@ An attacker could use a flash loan to temporarily inflate their balance during p
 
 ### ETH Recycling Across Addresses
 
-A user could transfer 0.01 ETH between addresses to generate multiple proofs. Rate limiting by epoch (one claim per public key per week) bounds the attack rate, and the economic incentive is negligible.
+A user could transfer ETH between addresses to meet the minimum balance and generate multiple proofs. Rate limiting by epoch (one claim per public key per week) bounds the attack rate, and the economic incentive is negligible.
 
 ### Timing Correlation
 

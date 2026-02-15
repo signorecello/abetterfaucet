@@ -191,12 +191,12 @@ export function successCheckHtml(): string {
 
 // --- Step indicator logic (#2) ---
 
-export function updateStepIndicator(currentStep: 1 | 2 | 3) {
-  for (let i = 1; i <= 3; i++) {
+export function updateStepIndicator(currentStep: 1 | 2 | 3 | 4 | 5) {
+  for (let i = 1; i <= 5; i++) {
     const stepEl = document.querySelector(`[data-step="${i}"]`);
     if (!stepEl) continue;
 
-    stepEl.classList.remove("active", "completed");
+    stepEl.classList.remove("active", "completed", "proving");
     if (i < currentStep) {
       stepEl.classList.add("completed");
     } else if (i === currentStep) {
@@ -205,11 +205,32 @@ export function updateStepIndicator(currentStep: 1 | 2 | 3) {
   }
 
   // Update connectors
-  for (let i = 1; i <= 2; i++) {
+  for (let i = 1; i <= 4; i++) {
     const connector = document.querySelector(`[data-connector="${i}"]`);
     if (!connector) continue;
     connector.classList.toggle("active", i < currentStep);
   }
+}
+
+/** Show a proving progress overlay */
+export function showProvingProgress(container: HTMLElement | null, step: string, detail?: string) {
+  if (!container) return;
+  container.innerHTML = `
+    <div class="proving-progress">
+      <div class="proving-spinner"></div>
+      <div class="proving-step">${escapeHtml(step)}</div>
+      ${detail ? `<div class="proving-detail">${escapeHtml(detail)}</div>` : ""}
+    </div>
+  `;
+  show(container);
+}
+
+/** Hide proving progress */
+export function hideProvingProgress(container: HTMLElement | null) {
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
 }
 
 // --- Friendly error messages (#12) ---
@@ -232,8 +253,8 @@ export function getFriendlyError(code: string, originalMessage: string, epochDur
       hint: "Try reconnecting your wallet and submitting again. If the issue persists, your wallet's balance may have changed.",
     },
     INSUFFICIENT_BALANCE: {
-      message: "Your mainnet ETH balance is too low.",
-      hint: "You need at least 0.01 ETH on mainnet to claim testnet funds.",
+      message: "Your ETH balance is too low.",
+      hint: "You need a minimum ETH balance on the origin chain to claim testnet funds.",
     },
     RATE_LIMITED: {
       message: "Too many requests.",

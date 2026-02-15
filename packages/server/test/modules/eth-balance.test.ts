@@ -5,7 +5,9 @@ import { EthBalanceModule } from "../../src/lib/modules/eth-balance/module";
 import { encodePublicInputs, resetBackend } from "../../src/lib/modules/eth-balance/verifier";
 import type { StateRootOracle } from "../../src/lib/state-root-oracle";
 import type { PublicInputs } from "../../src/lib/modules/types";
-import { EPOCH_DURATION_SECONDS, MIN_BALANCE_WEI } from "../../src/lib/modules/eth-balance/constants";
+import { EPOCH_DURATION_SECONDS } from "../../src/lib/modules/eth-balance/constants";
+
+const MIN_BALANCE_WEI = 10_000_000_000_000_000n;
 
 const FIXTURE_PATH = resolve(
   import.meta.dir,
@@ -40,7 +42,7 @@ describe("EthBalanceModule", () => {
 
   beforeEach(() => {
     oracle = createMockOracle();
-    module = new EthBalanceModule(oracle);
+    module = new EthBalanceModule(oracle, { minBalance: MIN_BALANCE_WEI });
   });
 
   test("id is eth-balance", () => {
@@ -57,7 +59,7 @@ describe("EthBalanceModule", () => {
   });
 
   test("currentEpoch respects custom epoch duration", () => {
-    const customModule = new EthBalanceModule(oracle, { epochDuration: 3600 });
+    const customModule = new EthBalanceModule(oracle, { epochDuration: 3600, minBalance: MIN_BALANCE_WEI });
     const expected = Math.floor(Date.now() / 1000 / 3600);
     expect(customModule.currentEpoch()).toBe(expected);
   });
@@ -175,7 +177,7 @@ describe("EthBalanceModule", () => {
 
     test("oracle returning false for any state root rejects all claims", async () => {
       const strictOracle = createMockOracle({ validStateRoots: [] });
-      const strictModule = new EthBalanceModule(strictOracle);
+      const strictModule = new EthBalanceModule(strictOracle, { minBalance: MIN_BALANCE_WEI });
       const inputs: PublicInputs = {
         stateRoot: "0xvalidroot",
         epoch: strictModule.currentEpoch(),
@@ -254,7 +256,7 @@ describe("EthBalanceModule", () => {
           const fixtureOracle = createMockOracle({
             validStateRoots: [fixture.stateRoot],
           });
-          const fixtureModule = new EthBalanceModule(fixtureOracle);
+          const fixtureModule = new EthBalanceModule(fixtureOracle, { minBalance: MIN_BALANCE_WEI });
 
           const result = await fixtureModule.verifyProof(proofBytes, {
             stateRoot: fixture.stateRoot,
@@ -285,7 +287,7 @@ describe("EthBalanceModule", () => {
           const fixtureOracle = createMockOracle({
             validStateRoots: [fixture.stateRoot],
           });
-          const fixtureModule = new EthBalanceModule(fixtureOracle);
+          const fixtureModule = new EthBalanceModule(fixtureOracle, { minBalance: MIN_BALANCE_WEI });
 
           const result = await fixtureModule.verifyProof(proofBytes, {
             stateRoot: fixture.stateRoot,
@@ -313,7 +315,7 @@ describe("EthBalanceModule", () => {
           const fixtureOracle = createMockOracle({
             validStateRoots: [fixture.stateRoot],
           });
-          const fixtureModule = new EthBalanceModule(fixtureOracle);
+          const fixtureModule = new EthBalanceModule(fixtureOracle, { minBalance: MIN_BALANCE_WEI });
 
           // Tamper with epoch (change to epoch + 1)
           const result = await fixtureModule.verifyProof(proofBytes, {

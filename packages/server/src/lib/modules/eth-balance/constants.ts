@@ -1,4 +1,3 @@
-export const MIN_BALANCE_WEI = 10_000_000_000_000_000n; // 0.01 ETH
 export const EPOCH_DURATION_SECONDS = 604_800; // 1 week
 export const DOMAIN_MESSAGE = "zk_faucet_v1:eth-balance:nullifier_seed";
 export const MAX_STATE_ROOT_AGE_BLOCKS = 256;

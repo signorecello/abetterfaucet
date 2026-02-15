@@ -29,7 +29,10 @@ import { BarretenbergSync, Fr } from "@aztec/bb.js";
 
 // --- Config ---
 const EPOCH_DURATION = 604_800; // 1 week in seconds
-const MIN_BALANCE_WEI = 10_000_000_000_000_000n; // 0.01 ETH
+if (!process.env.VITE_MIN_BALANCE_WEI) {
+  throw new Error("Missing VITE_MIN_BALANCE_WEI env var");
+}
+const MIN_BALANCE_WEI = BigInt(process.env.VITE_MIN_BALANCE_WEI);
 
 // Circuit constants (must match lib/ethereum)
 const MAX_NODE_LEN = 532;

@@ -40,7 +40,7 @@ export function loadConfig(): ServerConfig {
     rateLimitWindowMs: parseInt(optionalEnv("RATE_LIMIT_WINDOW_MS", "60000"), 10),
     dispensationAmountEth: optionalEnv("DISPENSATION_AMOUNT", "0.1"),
     epochDuration: parseInt(optionalEnv("EPOCH_DURATION", "604800"), 10),
-    minBalanceWei: BigInt(optionalEnv("MIN_BALANCE_WEI", "10000000000000000")),
+    minBalanceWei: BigInt(requireEnv("VITE_MIN_BALANCE_WEI")),
     dbPath: optionalEnv("DB_PATH", "./data/nullifiers.db"),
   };
 }

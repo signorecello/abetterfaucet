@@ -130,12 +130,9 @@ function startFullTestServer(): FullTestServer {
   app.route("/health", createHealthRouter({ registry, dispatcher: dispatcher as any, startTime }));
 
   // Serve frontend static files (same as server/src/index.ts)
-  const frontendDir = new URL("../../frontend/public", import.meta.url).pathname;
+  const frontendDir = new URL("../../frontend/dist", import.meta.url).pathname;
 
-  app.use("/public/*", serveStatic({
-    root: frontendDir,
-    rewriteRequestPath: (path) => path.replace(/^\/public/, ""),
-  }));
+  app.use("/assets/*", serveStatic({ root: frontendDir }));
 
   app.get("/", async (c) => {
     const file = Bun.file(`${frontendDir}/index.html`);
@@ -188,21 +185,30 @@ describe("Frontend API integration tests", () => {
     });
   });
 
-  describe("GET /public/styles.css", () => {
-    test("returns CSS content", async () => {
-      const res = await fetch(`${server.baseUrl}/public/styles.css`);
+  describe("GET /assets/* (Vite build output)", () => {
+    test("returns CSS content from assets", async () => {
+      // Find the CSS asset filename from dist
+      const { readdirSync } = await import("fs");
+      const { resolve } = await import("path");
+      const distAssets = resolve(import.meta.dir, "../../frontend/dist/assets");
+      const cssFile = readdirSync(distAssets).find((f: string) => f.endsWith(".css"));
+      expect(cssFile).toBeDefined();
+
+      const res = await fetch(`${server.baseUrl}/assets/${cssFile}`);
       expect(res.status).toBe(200);
       const body = await res.text();
-      // CSS files should contain style rules
       expect(body.length).toBeGreaterThan(0);
-      // A CSS file will typically contain { or : characters
       expect(body).toMatch(/[{:]/);
     });
-  });
 
-  describe("GET /public/bundle.js", () => {
-    test("returns JavaScript content", async () => {
-      const res = await fetch(`${server.baseUrl}/public/bundle.js`);
+    test("returns JavaScript content from assets", async () => {
+      const { readdirSync } = await import("fs");
+      const { resolve } = await import("path");
+      const distAssets = resolve(import.meta.dir, "../../frontend/dist/assets");
+      const jsFile = readdirSync(distAssets).find((f: string) => f.startsWith("index-") && f.endsWith(".js"));
+      expect(jsFile).toBeDefined();
+
+      const res = await fetch(`${server.baseUrl}/assets/${jsFile}`);
       expect(res.status).toBe(200);
       const body = await res.text();
       expect(body.length).toBeGreaterThan(0);
@@ -211,19 +217,19 @@ describe("Frontend API integration tests", () => {
 
   describe("Static file edge cases", () => {
     test("requesting non-existent static file returns 404", async () => {
-      const res = await fetch(`${server.baseUrl}/public/nonexistent.xyz`);
+      const res = await fetch(`${server.baseUrl}/assets/nonexistent.xyz`);
       expect(res.status).toBe(404);
     });
 
-    test("path traversal attempt /public/../../../etc/passwd returns 404", async () => {
-      const res = await fetch(`${server.baseUrl}/public/../../../etc/passwd`);
+    test("path traversal attempt /assets/../../../etc/passwd returns 404", async () => {
+      const res = await fetch(`${server.baseUrl}/assets/../../../etc/passwd`);
       // Should NOT return 200 or leak file contents
       expect(res.status).not.toBe(200);
     });
 
     test("path traversal attempt with encoded slashes returns 404", async () => {
       const res = await fetch(
-        `${server.baseUrl}/public/..%2F..%2F..%2Fetc%2Fpasswd`,
+        `${server.baseUrl}/assets/..%2F..%2F..%2Fetc%2Fpasswd`,
       );
       expect(res.status).not.toBe(200);
     });

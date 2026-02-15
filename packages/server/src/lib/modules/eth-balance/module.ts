@@ -1,25 +1,22 @@
 import type { ProofModule, PublicInputs, ValidationResult } from "../types";
 import type { StateRootOracle } from "../../state-root-oracle";
 import { verifyProof } from "./verifier";
-import {
-  EPOCH_DURATION_SECONDS,
-  MIN_BALANCE_WEI,
-} from "./constants";
+import { EPOCH_DURATION_SECONDS } from "./constants";
 
 export class EthBalanceModule implements ProofModule {
   readonly id = "eth-balance";
   readonly name = "ETH Balance Proof";
   readonly description =
-    "Proves ownership of >= 0.01 ETH on Ethereum mainnet without revealing the address";
+    "Proves ownership of sufficient ETH on the origin chain without revealing the address";
   readonly epochDurationSeconds: number;
 
   private readonly oracle: StateRootOracle;
   private readonly minBalance: bigint;
 
-  constructor(oracle: StateRootOracle, options?: { epochDuration?: number; minBalance?: bigint }) {
+  constructor(oracle: StateRootOracle, options: { epochDuration?: number; minBalance: bigint }) {
     this.oracle = oracle;
     this.epochDurationSeconds = options?.epochDuration ?? EPOCH_DURATION_SECONDS;
-    this.minBalance = options?.minBalance ?? MIN_BALANCE_WEI;
+    this.minBalance = options.minBalance;
   }
 
   currentEpoch(): number {

@@ -254,7 +254,7 @@ export function createProveRouter(deps: ProveDeps): Hono {
     const nullifier_bigint = BigInt(nullifier_fr.toString());
 
     // Build the inputs for the Noir circuit
-    const MIN_BALANCE_WEI = 10_000_000_000_000_000n;
+    const MIN_BALANCE_WEI = BigInt(process.env.VITE_MIN_BALANCE_WEI || "0");
     const inputs: Record<string, any> = {
       sig_r: bytesToInputArray(sig_r),
       sig_s: bytesToInputArray(sig_s),

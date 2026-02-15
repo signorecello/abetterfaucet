@@ -57,6 +57,16 @@ export interface ApiError {
   };
 }
 
+export interface StorageProofResponse {
+  balance: string;
+  nonce: string;
+  codeHash: string;
+  storageHash: string;
+  accountProof: string[];
+  stateRoot: string;
+  blockNumber: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -110,6 +120,19 @@ class ApiClient {
 
   async getHealth(): Promise<HealthResponse> {
     return this.request<HealthResponse>("/health");
+  }
+
+  /** Fetch compiled circuit artifact for in-browser proof generation */
+  async getCircuitArtifact(moduleId: string): Promise<any> {
+    const res = await fetch(`${this.baseUrl}/circuits/${moduleId}/artifact.json`);
+    if (!res.ok) {
+      throw new ApiRequestError(
+        `Failed to fetch circuit artifact: HTTP ${res.status}`,
+        "ARTIFACT_FETCH_FAILED",
+        res.status,
+      );
+    }
+    return res.json();
   }
 }
 

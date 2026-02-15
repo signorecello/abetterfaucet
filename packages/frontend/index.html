@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>zk_faucet — Privacy-Preserving Testnet Faucet</title>
   <meta name="description" content="Claim testnet ETH using ZK storage proofs. Your mainnet identity stays private." />
-  <link rel="stylesheet" href="/public/styles.css" />
+  <link rel="stylesheet" href="/src/styles.css" />
 </head>
 <body>
   <!-- Toast notifications container -->
@@ -35,20 +35,30 @@
     <!-- ==================== CLAIM VIEW ==================== -->
     <div data-view="claim">
 
-      <!-- Step Indicator -->
+      <!-- Step Indicator (5 steps for full ZK proof flow) -->
       <div class="step-indicator" id="step-indicator">
         <div class="step active" data-step="1">
           <span class="step-number">1</span>
-          <span class="step-label">Connect Wallet</span>
+          <span class="step-label">Connect</span>
         </div>
         <div class="step-connector" data-connector="1"></div>
         <div class="step" data-step="2">
           <span class="step-number">2</span>
-          <span class="step-label">Fill Details</span>
+          <span class="step-label">Sign</span>
         </div>
         <div class="step-connector" data-connector="2"></div>
         <div class="step" data-step="3">
           <span class="step-number">3</span>
+          <span class="step-label">Proof</span>
+        </div>
+        <div class="step-connector" data-connector="3"></div>
+        <div class="step" data-step="4">
+          <span class="step-number">4</span>
+          <span class="step-label">ZK Prove</span>
+        </div>
+        <div class="step-connector" data-connector="4"></div>
+        <div class="step" data-step="5">
+          <span class="step-number">5</span>
           <span class="step-label">Claim</span>
         </div>
       </div>
@@ -97,23 +107,22 @@
           </div>
 
           <button class="btn btn-primary" id="claim-btn" disabled>
-            Claim Testnet ETH
+            Generate ZK Proof &amp; Claim
           </button>
         </div>
+
+        <!-- Progress indicator for multi-step claim flow -->
+        <div id="claim-progress"></div>
 
         <div id="claim-messages"></div>
         <div id="claim-result"></div>
       </div>
 
-      <!-- Privacy banner in claim view (#5) -->
+      <!-- Privacy banner in claim view -->
       <div class="privacy-banner">
         <svg class="privacy-banner-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        <span>Your mainnet address is never revealed. The ZK proof only shows you hold a sufficient balance — the server never learns which address is yours.</span>
+        <span>Your proof is generated entirely in your browser. Private data (address, signature, balance) never leaves your device. The server only receives the ZK proof.</span>
       </div>
-
-      <p class="text-xs text-muted text-center mt-8">
-        MVP mode: submits a placeholder proof. Real ZK proofs require the Noir WASM prover.
-      </p>
     </div>
 
     <!-- ==================== STATUS VIEW ==================== -->
@@ -151,18 +160,19 @@
           <p>
             zk_faucet uses zero-knowledge storage proofs to verify you hold
             a minimum ETH balance on mainnet without revealing your identity.
-            The proof is generated client-side and verified off-chain,
-            ensuring your mainnet address is never linked to your testnet claim.
+            The proof is generated entirely in your browser using WASM --
+            your private data never leaves your device. The server only sees
+            the final proof and public inputs, never your address or balance.
           </p>
         </div>
         <div class="info-block">
           <h3>Claim Flow</h3>
           <p>
-            1. Connect your wallet and sign the epoch message<br />
-            2. A ZK proof is generated proving your balance exceeds the minimum<br />
-            3. The proof includes a nullifier derived from your public key and the current epoch<br />
-            4. The server verifies the proof and sends testnet ETH to your chosen address<br />
-            5. The nullifier prevents double-claiming within the same epoch
+            1. Connect your wallet (MetaMask)<br />
+            2. Sign the epoch domain message (EIP-191 personal_sign)<br />
+            3. Storage proof is fetched from Ethereum mainnet<br />
+            4. A ZK proof is generated proving your balance exceeds the minimum<br />
+            5. The proof is submitted and verified, testnet ETH is sent to your chosen address
           </p>
         </div>
       </div>
@@ -203,6 +213,6 @@
 
   </div>
 
-  <script src="/public/bundle.js"></script>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

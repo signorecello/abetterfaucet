@@ -898,6 +898,53 @@ select option {
   }
 }
 
+/* Proving progress indicator */
+.proving-progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: rgba(0, 255, 136, 0.04);
+  border: 1px solid rgba(0, 255, 136, 0.12);
+  border-radius: var(--radius-sm);
+  margin-top: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+.proving-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 255, 136, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.proving-step {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.proving-detail {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+@media (max-width: 600px) {
+  .proving-progress {
+    flex-wrap: wrap;
+  }
+
+  .proving-detail {
+    width: 100%;
+    margin-left: 34px;
+    margin-top: 4px;
+  }
+}
+
 /* Footer */
 .footer {
   text-align: center;

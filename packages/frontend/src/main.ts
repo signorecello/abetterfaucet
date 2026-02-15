@@ -1,8 +1,15 @@
 // zk_faucet frontend — entry point
 
+// Polyfill Buffer for browser (required by @aztec/bb.js WASM internals)
+import { Buffer } from "buffer";
+if (typeof globalThis.Buffer === "undefined") {
+  (globalThis as any).Buffer = Buffer;
+}
+
 import { api, ApiRequestError } from "./api";
 import type { Network, Module } from "./api";
 import {
+  initWallet,
   connectWallet,
   disconnectWallet,
   getWalletState,
@@ -10,7 +17,10 @@ import {
   onWalletChange,
   formatBalance,
   hasMinBalance,
-  generateMockNullifier,
+  signDomainMessage,
+  getCurrentEpoch,
+  getStorageProof,
+  MIN_BALANCE_WEI,
 } from "./wallet";
 import {
   $,
@@ -36,12 +46,15 @@ import {
   successCheckHtml,
   updateStepIndicator,
   getFriendlyError,
+  showProvingProgress,
+  hideProvingProgress,
 } from "./ui";
 
 // --- App State ---
 let networks: Network[] = [];
 let modules: Module[] = [];
 let epochTimer: ReturnType<typeof setInterval> | null = null;
+let isClaimInProgress = false;
 
 // --- Initialization ---
 document.addEventListener("DOMContentLoaded", init);
@@ -52,6 +65,9 @@ async function init() {
   setupFormListeners();
   setupCopyDelegation();
   setupKeyboardShortcuts();
+
+  // Initialize wallet module (uses wallet's own provider, no server RPC needed)
+  initWallet();
 
   // Show skeleton for network select while loading
   showNetworkSkeleton();
@@ -103,14 +119,13 @@ async function loadModules() {
   }
 }
 
-/** Show skeleton shimmer while networks are loading (#3) */
+/** Show skeleton shimmer while networks are loading */
 function showNetworkSkeleton() {
   const select = $("#network-select") as HTMLSelectElement | null;
   if (!select) return;
   const parent = select.parentElement;
   if (!parent) return;
 
-  // Hide the real select and show a skeleton
   select.style.display = "none";
   const skeleton = document.createElement("div");
   skeleton.className = "skeleton";
@@ -122,7 +137,6 @@ function populateNetworkDropdown() {
   const select = $("#network-select") as HTMLSelectElement | null;
   if (!select) return;
 
-  // Remove skeleton if present
   const skeleton = document.getElementById("network-skeleton");
   if (skeleton) skeleton.remove();
   select.style.display = "";
@@ -166,7 +180,7 @@ function startEpochCountdown() {
 
 // --- Claim View State Management ---
 
-/** Toggle between connect prompt and claim form based on wallet state (#3) */
+/** Toggle between connect prompt and claim form based on wallet state */
 function updateClaimViewState() {
   const wallet = getWalletState();
   const connectPrompt = $("#connect-prompt");
@@ -183,8 +197,9 @@ function updateClaimViewState() {
   updateStepState();
 }
 
-/** Update step indicator based on current state (#2) */
+/** Update step indicator based on current state */
 function updateStepState() {
+  if (isClaimInProgress) return; // Don't update during claim flow
   const wallet = getWalletState();
   const recipientInput = $("#recipient-input") as HTMLInputElement | null;
   const networkSelect = $("#network-select") as HTMLSelectElement | null;
@@ -198,7 +213,7 @@ function updateStepState() {
   const hasNetwork = networkSelect && networkSelect.value !== "";
 
   if (hasRecipient && hasNetwork) {
-    updateStepIndicator(3);
+    updateStepIndicator(2);
   } else {
     updateStepIndicator(2);
   }
@@ -227,19 +242,9 @@ async function handleConnectWallet() {
     return;
   }
 
-  const mod = getEthBalanceModule();
-  if (!mod) {
-    showMessage(
-      $("#wallet-messages"),
-      "No proof modules available. Is the server running?",
-      "error",
-    );
-    return;
-  }
-
   setLoading(btn, true);
   try {
-    await connectWallet(mod.currentEpoch);
+    await connectWallet();
     renderWalletStatus(getWalletState());
     showToast("Wallet connected", "success");
   } catch (err) {
@@ -265,9 +270,10 @@ function renderWalletStatus(state: ReturnType<typeof getWalletState>) {
   if (connectBtn) hide(connectBtn);
   if (statusEl) {
     statusEl.className = "wallet-status connected";
-    const balStr = state.balance ? formatBalance(state.balance) : "...";
-    const sufficient = state.balance ? hasMinBalance(state.balance) : false;
-    const balClass = state.balance
+    const hasBal = state.balance !== null;
+    const balStr = hasBal ? formatBalance(state.balance!) : "...";
+    const sufficient = hasBal ? hasMinBalance(state.balance!) : false;
+    const balClass = hasBal
       ? sufficient
         ? "sufficient"
         : "insufficient"
@@ -277,7 +283,7 @@ function renderWalletStatus(state: ReturnType<typeof getWalletState>) {
     statusEl.innerHTML = `
       <div>
         <span class="wallet-address">${truncateAddress(state.address)}</span>
-        <span class="wallet-balance ${balClass}">${balStr} ETH${state.balance ? checkMark : ""}</span>
+        <span class="wallet-balance ${balClass}">${balStr} ETH${hasBal ? checkMark : ""}</span>
       </div>
       <button class="wallet-disconnect" id="disconnect-btn">disconnect</button>
     `;
@@ -316,15 +322,13 @@ function updateClaimButton() {
     recipientInput && isValidAddress(recipientInput.value.trim());
   const hasNetwork = networkSelect && networkSelect.value !== "";
 
-  btn.disabled = !(hasWallet && hasRecipient && hasNetwork);
+  btn.disabled = !(hasWallet && hasRecipient && hasNetwork) || isClaimInProgress;
 
-  // Update step indicator when form state changes
   updateStepState();
 }
 
 // --- Form Listeners ---
 function setupFormListeners() {
-  // Claim form
   const recipientInput = $("#recipient-input");
   const networkSelect = $("#network-select");
   const claimBtn = $("#claim-btn");
@@ -357,7 +361,7 @@ function setupFormListeners() {
   }
 }
 
-/** Keyboard shortcuts: Enter to submit claim form (#11) */
+/** Keyboard shortcuts: Enter to submit claim form */
 function setupKeyboardShortcuts() {
   const claimFormCard = $("#claim-form-card");
   if (claimFormCard) {
@@ -374,7 +378,7 @@ function setupKeyboardShortcuts() {
   }
 }
 
-/** Event delegation for copy buttons (#9) */
+/** Event delegation for copy buttons */
 function setupCopyDelegation() {
   document.addEventListener("click", async (e) => {
     const target = e.target as HTMLElement;
@@ -402,14 +406,18 @@ function validateRecipientField() {
   }
 }
 
-// --- Claim ---
+// --- Claim (Real ZK Proof Flow) ---
 async function handleClaim() {
+  if (isClaimInProgress) return;
+
   const btn = $("#claim-btn");
   const msgContainer = $("#claim-messages");
   const resultContainer = $("#claim-result");
+  const progressContainer = $("#claim-progress");
 
   clearMessage(msgContainer);
   if (resultContainer) resultContainer.innerHTML = "";
+  hideProvingProgress(progressContainer);
 
   const wallet = getWalletState();
   const recipientInput = $("#recipient-input") as HTMLInputElement | null;
@@ -418,6 +426,7 @@ async function handleClaim() {
   const recipient = recipientInput?.value.trim() ?? "";
   const targetNetwork = networkSelect?.value ?? "";
 
+  // --- Validation ---
   if (!wallet.connected || !wallet.address) {
     showMessage(msgContainer, "Please connect your wallet first.", "error");
     return;
@@ -434,9 +443,10 @@ async function handleClaim() {
   }
 
   if (wallet.balance && !hasMinBalance(wallet.balance)) {
+    const minEth = Number(MIN_BALANCE_WEI) / 1e18;
     showMessage(
       msgContainer,
-      "Insufficient mainnet ETH balance. You need at least 0.01 ETH.",
+      `Insufficient ETH balance. You need at least ${minEth} ETH.`,
       "error",
     );
     return;
@@ -448,26 +458,105 @@ async function handleClaim() {
     return;
   }
 
+  isClaimInProgress = true;
   setLoading(btn, true);
 
   try {
-    // MVP: submit a mock/placeholder proof
-    const nullifier = generateMockNullifier(wallet.address, mod.currentEpoch);
+    const epoch = mod.currentEpoch;
+
+    // --- Step 1: Sign domain message ---
+    updateStepIndicator(2);
+    showProvingProgress(progressContainer, "Signing domain message...", "Please confirm in MetaMask");
+
+    let signature: string;
+    try {
+      signature = await signDomainMessage(epoch);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("User denied") || msg.includes("rejected")) {
+        showMessage(msgContainer, "Signature request was rejected.", "error");
+      } else {
+        showErrorWithHint(msgContainer, "Failed to sign message: " + msg, "Make sure MetaMask is unlocked and try again.");
+      }
+      return;
+    }
+
+    // --- Step 2: Fetch storage proof via wallet's own RPC provider ---
+    updateStepIndicator(3);
+    showProvingProgress(progressContainer, "Fetching storage proof...", "Querying Ethereum via your wallet's RPC");
+
+    let storageProof;
+    try {
+      storageProof = await getStorageProof(wallet.address);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showErrorWithHint(
+        msgContainer,
+        "Failed to fetch storage proof: " + msg,
+        "Could not reach the Ethereum RPC via your wallet. Check your connection and try again.",
+      );
+      return;
+    }
+
+    // --- Step 3: Fetch circuit artifact + generate ZK proof in browser ---
+    updateStepIndicator(4);
+    showProvingProgress(
+      progressContainer,
+      "Loading circuit artifact...",
+      "Downloading the compiled circuit (~5 MB)",
+    );
+
+    let circuitArtifact;
+    try {
+      circuitArtifact = await api.getCircuitArtifact(mod.id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showErrorWithHint(
+        msgContainer,
+        "Failed to load circuit: " + msg,
+        "The circuit artifact could not be downloaded. Check your connection and try again.",
+      );
+      return;
+    }
+
+    let proofResult;
+    try {
+      const { generateProofInBrowser } = await import("./prove");
+      proofResult = await generateProofInBrowser(
+        circuitArtifact,
+        storageProof,
+        signature,
+        wallet.address,
+        epoch,
+        (step, detail) => {
+          showProvingProgress(progressContainer, step, detail);
+        },
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showErrorWithHint(
+        msgContainer,
+        "Proof generation failed: " + msg,
+        "The ZK proof could not be generated in your browser. Try refreshing and submitting again.",
+      );
+      return;
+    }
+
+    // --- Step 4: Submit claim ---
+    updateStepIndicator(5);
+    showProvingProgress(progressContainer, "Submitting claim...", "Sending proof to the faucet");
 
     const result = await api.submitClaim({
       moduleId: mod.id,
-      proof: "0x" + "00".repeat(32), // placeholder proof
-      publicInputs: {
-        stateRoot: "0x" + "00".repeat(32), // placeholder
-        epoch: mod.currentEpoch,
-        minBalance: "10000000000000000", // 0.01 ETH
-        nullifier,
-      },
+      proof: proofResult.proof,
+      publicInputs: proofResult.publicInputs,
       recipient,
       targetNetwork,
     });
 
-    // Find network for explorer link
+    // --- Step 5: Success ---
+    hideProvingProgress(progressContainer);
+
     const net = networks.find((n) => n.id === result.network);
     const explorerLink = net
       ? getExplorerTxUrl(net.explorerUrl, result.txHash)
@@ -502,11 +591,12 @@ async function handleClaim() {
         </div>
       `;
 
-      // Auto-scroll to result (#8)
       scrollToElement(resultContainer);
     }
+
+    showToast("Claim successful!", "success");
   } catch (err) {
-    const mod = getEthBalanceModule();
+    hideProvingProgress(progressContainer);
     if (err instanceof ApiRequestError) {
       const friendly = getFriendlyError(err.code, err.message, mod?.epochDurationSeconds);
       showErrorWithHint(msgContainer, friendly.message, friendly.hint);
@@ -519,7 +609,10 @@ async function handleClaim() {
       );
     }
   } finally {
+    isClaimInProgress = false;
     setLoading(btn, false);
+    hideProvingProgress(progressContainer);
+    updateStepState();
   }
 }
 
@@ -582,7 +675,6 @@ async function handleCheckStatus() {
         </div>
       `;
 
-      // Auto-scroll to result (#8)
       scrollToElement(resultContainer);
     }
   } catch (err) {

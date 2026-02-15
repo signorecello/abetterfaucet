@@ -1,13 +1,13 @@
 # zk_faucet
 
-Privacy-preserving testnet faucet using ZK storage proofs. Users prove they hold >= 0.01 ETH on Ethereum mainnet via a Noir ZK circuit, then receive testnet funds at a different address with no link between identities.
+Privacy-preserving testnet faucet using ZK storage proofs. Users prove they hold sufficient ETH on a configurable origin chain via a Noir ZK circuit, then receive testnet funds at a different address with no link between identities.
 
 ## Quick Reference
 
 ```bash
 bun install                # install deps
 bun run dev                # build frontend + start server (watch mode)
-bun run test               # run all tests (173 total)
+bun run test               # run all tests (170 total)
 ```
 
 ## Project Structure
@@ -19,7 +19,7 @@ packages/
   circuits/    # Noir ZK circuits + ethereum MPT library
   server/      # Hono API server (Bun runtime)
   client/      # CLI tool for wallet + proof generation
-  frontend/    # Vanilla TS/CSS SPA with MetaMask
+  frontend/    # Vanilla TS/CSS SPA (Vite build, wallet integration)
   e2e/         # End-to-end integration tests
 ```
 
@@ -27,6 +27,7 @@ packages/
 
 - **Runtime**: Bun (package manager, test runner, bundler)
 - **Server**: Hono + pino + valibot
+- **Frontend**: Vite + vanilla TS, wagmi/core for wallet, bb.js for in-browser proving
 - **ZK**: Noir circuits, Barretenberg WASM verifier (UltraHonk), bb.js
 - **Blockchain**: viem
 - **Storage**: SQLite (bun:sqlite) for nullifiers
@@ -113,9 +114,23 @@ Hono API with modular proof verification.
 ### Tests
 ```bash
 cd packages/server && bun test     # 66 tests
-cd packages/client && bun test     # 38 tests
+cd packages/client && bun test     # 35 tests
 cd packages/e2e && bun test        # 69 tests
 ```
+
+## Frontend: packages/frontend/
+
+Vanilla TS SPA built with Vite. Wallet integration via `@wagmi/core`.
+
+### Key Design
+- **No server RPC leak**: `ORIGIN_RPC_URL` is never exposed to the browser
+- **Wallet provider for RPC**: Balance queries use `http()` transport (chain's public RPC); `getStorageProof()` uses `custom(window.ethereum)` to route through the wallet's built-in RPC (e.g. Infura)
+- **Origin chain from env**: `VITE_ORIGIN_CHAINID` determines which chain to connect to (no hardcoded defaults)
+- **Min balance from env**: `VITE_MIN_BALANCE_WEI` is the single source of truth for the balance threshold
+
+### Vite Config
+- `envDir: '../..'` — loads `.env` from the monorepo root (not `packages/frontend/`)
+- `VITE_*` env vars are inlined at build time via `import.meta.env`
 
 ## Design Decisions
 
@@ -127,11 +142,23 @@ cd packages/e2e && bun test        # 69 tests
 - **In-circuit message hash**: `message_hash` is computed in-circuit from epoch (prevents signature replay attacks)
 - **Proof generation**: ~85s with UltraHonk WASM, 35 public inputs (32 state_root bytes + epoch + min_balance + nullifier)
 - **Server verification**: Real UltraHonk verification via `@aztec/bb.js` (no mock verifier)
+- **No /config endpoint**: Frontend does not fetch config from server; all config via VITE_* build-time env vars
 
 ## Environment Variables
 
-Required: `ORIGIN_RPC_URL`, `FAUCET_PRIVATE_KEY` (also `PRIVATE_KEY` for circuit scripts).
-See `.env.example` for all options.
+### Shared (VITE_ prefix — used by frontend, server, client, and circuit scripts)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_ORIGIN_CHAINID` | **Yes** | Origin chain ID (1, 11155111, 17000) |
+| `VITE_MIN_BALANCE_WEI` | **Yes** | Minimum balance threshold in wei |
+
+### Server-only
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ORIGIN_RPC_URL` | **Yes** | Origin chain RPC URL (for state root verification) |
+| `FAUCET_PRIVATE_KEY` | **Yes** | 0x-prefixed private key holding testnet funds |
+
+See `.env.example` for all options including per-network RPC overrides.
 
 ### Per-Network RPC Overrides
 
