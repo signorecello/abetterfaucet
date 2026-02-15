@@ -164,7 +164,7 @@ async function cmdClaim(): Promise<void> {
       stateRoot: storageProof.stateRoot,
       epoch,
       minBalance: MIN_BALANCE.toString(),
-      nullifier: publicInputs[3], // nullifier is the 4th public input
+      nullifier: publicInputs[3]!, // nullifier is the 4th public input
     },
     recipient,
     targetNetwork,
@@ -269,6 +269,10 @@ async function main(): Promise<void> {
       await cmdClaim();
       break;
     case "status":
+      if (!args[1]) {
+        console.error("Usage: zk-faucet status <claimId>");
+        process.exit(1);
+      }
       await cmdStatus(args[1]);
       break;
     case "networks":
