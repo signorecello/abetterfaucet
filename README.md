@@ -47,10 +47,10 @@ Users prove they hold sufficient ETH on the origin chain (configured via `VITE_O
                           submits proof + recipient
                                    |
                                    v
-+----------------+        +------------------+        +------------------+
-|   Client CLI   | -----> |   Hono Server    | -----> | Testnet RPC      |
-| (alternative)  |        |                  |        | (Sepolia, etc.)  |
-+----------------+        |  - Proof verify  |        +------------------+
+                          +------------------+        +------------------+
+                          |   Hono Server    | -----> | Testnet RPC      |
+                          |                  |        | (Sepolia, etc.)  |
+                          |  - Proof verify  |        +------------------+
                           |  - Nullifier DB  |
                           |  - State root    |
                           |    oracle        |
@@ -87,7 +87,6 @@ ZK Proof Generation (client-side):
 |---------|-------------|
 | `packages/circuits` | Noir ZK circuit (`eth_balance`) with custom Ethereum MPT verification library |
 | `packages/server` | Hono API server with real Barretenberg proof verification (Bun runtime) |
-| `packages/client` | CLI tool for wallet interaction, epoch queries, and proof generation |
 | `packages/frontend` | Vanilla TypeScript/CSS SPA with wallet integration (Vite build, wagmi/core) |
 | `packages/e2e` | End-to-end integration tests with in-process test server |
 
@@ -228,24 +227,9 @@ Edit `.env` and set the required values:
 | `EPOCH_DURATION` | No | `604800` | Epoch length in seconds (default: 1 week) |
 | `DB_PATH` | No | `./data/nullifiers.db` | SQLite database path for nullifiers |
 
-#### Per-Network RPC Overrides
+#### Circuit Scripts
 
-Target network RPC URLs (from `networks.json`) can be overridden via env vars. Use this when the default public RPCs are unreliable.
-
-Pattern: `<NETWORK_ID>_RPC_URL` (uppercase, hyphens replaced with underscores).
-
-| Variable | Description |
-|----------|-------------|
-| `SEPOLIA_RPC_URL` | Override Sepolia RPC (e.g. Alchemy, Infura) |
-| `HOLESKY_RPC_URL` | Override Holesky RPC |
-
-#### Testing / Debugging
-
-| Variable | Description |
-|----------|-------------|
-| `TEST_ALLOW_BELOW_BALANCE` | Skip the CLI's early balance check. Proof generation proceeds but the circuit still enforces the minimum, so the proof will fail at the ZK level. |
-
-For circuit scripts, you also need:
+For circuit scripts (e.g. `generate_prover_toml.ts`), you also need:
 
 | Variable | Context | Description |
 |----------|---------|-------------|
@@ -259,7 +243,7 @@ cd packages/circuits/bin/eth_balance
 nargo compile
 ```
 
-This produces `target/eth_balance.json`, required by both the server (for proof verification) and the client (for proof generation).
+This produces `target/eth_balance.json`, required by the server for proof verification. The frontend downloads the artifact at runtime via the `/circuits/:moduleId/artifact.json` endpoint for in-browser proof generation.
 
 ## Running the Project
 
@@ -288,7 +272,7 @@ Build the frontend and start the server with file watching:
 bun run dev
 ```
 
-This runs `bun run build:frontend` followed by the server in watch mode. The server serves the frontend SPA from `packages/frontend/public/` on `/` and `/public/*`.
+This runs `bun run build:frontend` (Vite build to `packages/frontend/dist/`) followed by the server in watch mode. The server serves the frontend SPA from `packages/frontend/dist/` on `/`.
 
 ### Production
 
@@ -309,33 +293,11 @@ cd packages/frontend && bun run dev
 # Server only (watch mode)
 cd packages/server && bun --env-file=../../.env --watch src/index.ts
 
-# CLI client
-cd packages/client
-PRIVATE_KEY=0x... \
-FAUCET_URL=http://localhost:3000 \
-ORIGIN_RPC_URL=https://... \
-RECIPIENT_ADDRESS=0x... \
-TARGET_NETWORK=sepolia \
-bun src/cli.ts claim
 ```
-
-### CLI Commands
-
-The client CLI (`packages/client/src/cli.ts`) supports:
-
-```bash
-bun src/cli.ts claim         # Generate proof and claim testnet ETH
-bun src/cli.ts status <id>   # Check claim status
-bun src/cli.ts networks      # List available testnet networks
-bun src/cli.ts modules       # List available proof modules and epoch info
-bun src/cli.ts help           # Show usage
-```
-
-The `claim` command performs the full flow: derive address, check balance, sign domain message, fetch `eth_getProof`, download circuit artifact from server, generate ZK proof, and submit the claim.
 
 ## Testing
 
-170 tests total across all packages (Bun tests; circuit tests run separately via Nargo).
+135 tests total across all packages (Bun tests; circuit tests run separately via Nargo).
 
 ### Run All Tests
 
@@ -349,9 +311,6 @@ bun run test
 # Server unit tests (66 tests)
 cd packages/server && bun test
 
-# Client unit tests (35 tests)
-cd packages/client && bun test
-
 # Circuit tests via Nargo (14 tests across 2 crates)
 cd packages/circuits/bin/eth_balance && nargo test
 cd packages/circuits/lib/ethereum && nargo test
@@ -363,7 +322,7 @@ cd packages/e2e && bun test
 ### Convenience Scripts
 
 ```bash
-bun run test:unit          # Server + client tests
+bun run test:unit          # Server tests
 bun run test:e2e           # End-to-end tests
 ```
 
@@ -772,6 +731,8 @@ The server reads this file at startup. Ensure the faucet wallet (`FAUCET_PRIVATE
 | [Hono](https://hono.dev) | HTTP framework (server) |
 | [Noir](https://noir-lang.org) | ZK circuit language |
 | [Barretenberg / bb.js](https://github.com/AztecProtocol/aztec-packages) | UltraHonk ZK proof backend (WASM) |
+| [Vite](https://vite.dev) | Frontend build tool and dev server |
+| [@wagmi/core](https://wagmi.sh) | Framework-agnostic wallet integration (frontend) |
 | [viem](https://viem.sh) | Ethereum client library (RPC, signing, transactions) |
 | [SQLite (bun:sqlite)](https://bun.sh/docs/api/sqlite) | Nullifier persistence |
 | [pino](https://getpino.io) | Structured JSON logging |

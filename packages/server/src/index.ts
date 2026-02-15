@@ -70,18 +70,8 @@ const dbPath = config.dbPath.startsWith("/")
   : resolve(import.meta.dir, "../../..", config.dbPath);
 const nullifierStore = new NullifierStore(dbPath);
 
-// Fund dispatcher — allow per-network RPC overrides via env vars
-const networks: NetworkConfig[] = (networksJson as { networks: NetworkConfig[] }).networks.map(
-  (n) => {
-    const envKey = `${n.id.toUpperCase().replace(/-/g, "_")}_RPC_URL`;
-    const override = process.env[envKey];
-    if (override) {
-      logger.info({ network: n.id, rpcUrl: override }, `Using ${envKey} override`);
-      return { ...n, rpcUrl: override };
-    }
-    return n;
-  },
-);
+// Fund dispatcher
+const networks: NetworkConfig[] = (networksJson as { networks: NetworkConfig[] }).networks;
 const dispatcher = new FundDispatcher(networks, config.faucetPrivateKey, logger);
 
 // --- Build Hono app ---

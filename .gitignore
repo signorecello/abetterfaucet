@@ -40,3 +40,8 @@ Thumbs.db
 # Coverage
 coverage/
 .nyc_output/
+
+# AI stuff
+QA-REPORT.md
+CLEANUP.md
+SECURITY.md

@@ -7,18 +7,17 @@ Privacy-preserving testnet faucet using ZK storage proofs. Users prove they hold
 ```bash
 bun install                # install deps
 bun run dev                # build frontend + start server (watch mode)
-bun run test               # run all tests (170 total)
+bun run test               # run all tests (135 total)
 ```
 
 ## Project Structure
 
-Bun workspaces monorepo with 5 packages:
+Bun workspaces monorepo with 4 packages:
 
 ```
 packages/
   circuits/    # Noir ZK circuits + ethereum MPT library
   server/      # Hono API server (Bun runtime)
-  client/      # CLI tool for wallet + proof generation
   frontend/    # Vanilla TS/CSS SPA (Vite build, wallet integration)
   e2e/         # End-to-end integration tests
 ```
@@ -114,7 +113,6 @@ Hono API with modular proof verification.
 ### Tests
 ```bash
 cd packages/server && bun test     # 66 tests
-cd packages/client && bun test     # 35 tests
 cd packages/e2e && bun test        # 69 tests
 ```
 
@@ -146,7 +144,7 @@ Vanilla TS SPA built with Vite. Wallet integration via `@wagmi/core`.
 
 ## Environment Variables
 
-### Shared (VITE_ prefix — used by frontend, server, client, and circuit scripts)
+### Shared (VITE_ prefix — used by frontend, server, and circuit scripts)
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VITE_ORIGIN_CHAINID` | **Yes** | Origin chain ID (1, 11155111, 17000) |
@@ -158,16 +156,4 @@ Vanilla TS SPA built with Vite. Wallet integration via `@wagmi/core`.
 | `ORIGIN_RPC_URL` | **Yes** | Origin chain RPC URL (for state root verification) |
 | `FAUCET_PRIVATE_KEY` | **Yes** | 0x-prefixed private key holding testnet funds |
 
-See `.env.example` for all options including per-network RPC overrides.
-
-### Per-Network RPC Overrides
-
-Target network RPC URLs from `networks.json` can be overridden via env vars at server startup.
-Pattern: `<NETWORK_ID>_RPC_URL` (uppercase, hyphens replaced with underscores).
-
-```
-SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
-HOLESKY_RPC_URL=https://eth-holesky.g.alchemy.com/v2/YOUR_KEY
-```
-
-The override is applied in `packages/server/src/index.ts` before networks are passed to `FundDispatcher`.
+See `.env.example` for all options.
