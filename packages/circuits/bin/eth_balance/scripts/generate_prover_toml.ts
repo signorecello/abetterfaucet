@@ -6,7 +6,7 @@
  * inputs needed for the circuit including MPT proof data.
  *
  * Usage:
- *   PRIVATE_KEY=0x... ETH_RPC_URL=https://... bun run scripts/generate_prover_toml.ts
+ *   PRIVATE_KEY=0x... ORIGIN_RPC_URL=https://... bun run scripts/generate_prover_toml.ts
  *
  * Or load from project .env:
  *   bun --env-file=../../../../.env run scripts/generate_prover_toml.ts
@@ -79,10 +79,10 @@ function padLeft(data: Uint8Array, targetLen: number): Uint8Array {
 // --- Main ---
 async function main() {
   const privateKey = process.env.PRIVATE_KEY;
-  const rpcUrl = process.env.ETH_RPC_URL;
+  const rpcUrl = process.env.ORIGIN_RPC_URL;
 
   if (!privateKey) throw new Error("PRIVATE_KEY env var required");
-  if (!rpcUrl) throw new Error("ETH_RPC_URL env var required");
+  if (!rpcUrl) throw new Error("ORIGIN_RPC_URL env var required");
 
   console.error("Generating Prover.toml...\n");
 

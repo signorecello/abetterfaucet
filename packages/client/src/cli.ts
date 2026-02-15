@@ -39,7 +39,7 @@ Commands:
 Environment variables:
   PRIVATE_KEY        Your mainnet private key (0x-prefixed)
   FAUCET_URL         Faucet server URL (default: http://localhost:3000)
-  ETH_RPC_URL        Ethereum mainnet RPC URL
+  ORIGIN_RPC_URL        Ethereum mainnet RPC URL
   RECIPIENT_ADDRESS  Testnet address to receive ETH
   TARGET_NETWORK     Target testnet network ID
 
@@ -76,7 +76,7 @@ async function httpPost<T>(url: string, data: unknown): Promise<T> {
 async function cmdClaim(): Promise<void> {
   const privateKey = env("PRIVATE_KEY") as Hex;
   const faucetUrl = env("FAUCET_URL", "http://localhost:3000");
-  const rpcUrl = env("ETH_RPC_URL");
+  const rpcUrl = env("ORIGIN_RPC_URL");
   const recipient = env("RECIPIENT_ADDRESS") as Address;
   const targetNetwork = env("TARGET_NETWORK");
   const moduleId = env("MODULE_ID", DEFAULT_MODULE);

@@ -217,7 +217,7 @@ Edit `.env` and set the required values:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ETH_RPC_URL` | **Yes** | -- | Ethereum mainnet RPC URL |
+| `ORIGIN_RPC_URL` | **Yes** | -- | Ethereum mainnet RPC URL (used for balance proofs and state root verification) |
 | `FAUCET_PRIVATE_KEY` | **Yes** | -- | 0x-prefixed private key of the wallet holding testnet funds |
 | `PORT` | No | `3000` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
@@ -229,17 +229,34 @@ Edit `.env` and set the required values:
 | `MIN_BALANCE_WEI` | No | `10000000000000000` | Minimum mainnet balance (0.01 ETH in wei) |
 | `DB_PATH` | No | `./data/nullifiers.db` | SQLite database path for nullifiers |
 
+#### Per-Network RPC Overrides
+
+Target network RPC URLs (from `networks.json`) can be overridden via env vars. Use this when the default public RPCs are unreliable.
+
+Pattern: `<NETWORK_ID>_RPC_URL` (uppercase, hyphens replaced with underscores).
+
+| Variable | Description |
+|----------|-------------|
+| `SEPOLIA_RPC_URL` | Override Sepolia RPC (e.g. Alchemy, Infura) |
+| `HOLESKY_RPC_URL` | Override Holesky RPC |
+
+#### Testing / Debugging
+
+| Variable | Description |
+|----------|-------------|
+| `TEST_ALLOW_BELOW_BALANCE` | Skip the CLI's early balance check. Proof generation proceeds but the circuit still enforces the minimum, so the proof will fail at the ZK level. |
+
 For circuit scripts, you also need:
 
 | Variable | Context | Description |
 |----------|---------|-------------|
 | `PRIVATE_KEY` | Circuit scripts | 0x-prefixed mainnet private key (the address to prove balance for) |
+| `ORIGIN_RPC_URL` | Circuit scripts | Ethereum mainnet RPC URL (used by `generate_prover_toml.ts`) |
 
 For contract deployment (optional):
 
 | Variable | Description |
 |----------|-------------|
-| `SEPOLIA_RPC_URL` | Sepolia RPC URL for deploying NullifierRegistry |
 | `DEPLOYER_PRIVATE_KEY` | Deployer wallet private key |
 
 ### Compile the Circuit
@@ -265,7 +282,7 @@ npx hardhat compile
 ```bash
 bun install
 cp .env.example .env
-# Edit .env with your ETH_RPC_URL and FAUCET_PRIVATE_KEY
+# Edit .env with your ORIGIN_RPC_URL and FAUCET_PRIVATE_KEY
 bun run dev
 # Open http://localhost:3000
 ```
@@ -310,7 +327,7 @@ cd packages/server && bun --env-file=../../.env --watch src/index.ts
 cd packages/client
 PRIVATE_KEY=0x... \
 FAUCET_URL=http://localhost:3000 \
-ETH_RPC_URL=https://... \
+ORIGIN_RPC_URL=https://... \
 RECIPIENT_ADDRESS=0x... \
 TARGET_NETWORK=sepolia \
 bun src/cli.ts claim
@@ -332,7 +349,7 @@ The `claim` command performs the full flow: derive address, check balance, sign 
 
 ## Testing
 
-178 tests total across all packages (3 are skipped without a real proof fixture).
+184 tests total across all packages.
 
 ### Run All Tests
 
@@ -343,19 +360,20 @@ bun run test
 ### Run Tests by Package
 
 ```bash
-# Server unit tests (61 tests)
+# Server unit tests (66 tests)
 cd packages/server && bun test
 
-# Client unit tests (35 tests)
+# Client unit tests (38 tests)
 cd packages/client && bun test
 
 # Contract tests via Hardhat (11 tests)
 cd packages/contracts && npx hardhat test
 
-# Circuit tests via Nargo (8 tests)
-cd packages/circuits && nargo test
+# Circuit tests via Nargo (14 tests across 2 crates)
+cd packages/circuits/bin/eth_balance && nargo test
+cd packages/circuits/lib/ethereum && nargo test
 
-# End-to-end tests (38 tests)
+# End-to-end tests (69 tests)
 cd packages/e2e && bun test
 ```
 
@@ -585,7 +603,7 @@ This library has no external dependencies beyond `keccak256`. It was written fro
 | Proof size | ~16 KB |
 | Public inputs | 35 fields (32 state_root bytes + epoch + min_balance + nullifier) |
 | Backend | UltraHonk via `@aztec/bb.js` |
-| Circuit tests | 8 nargo tests |
+| Circuit tests | 14 nargo tests (7 eth_balance + 7 ethereum lib) |
 
 ### Circuit Commands
 
@@ -593,7 +611,7 @@ All commands run from the `packages/circuits/` directory:
 
 ```bash
 # Generate Prover.toml from a real Ethereum account proof
-# Requires PRIVATE_KEY and ETH_RPC_URL in .env
+# Requires PRIVATE_KEY and ORIGIN_RPC_URL in .env
 bun run eth_balance:generate
 
 # Compile and execute the circuit (fast witness check, no proof generation)

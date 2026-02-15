@@ -13,8 +13,10 @@ packages/contracts/cache/
 packages/contracts/typechain-types/
 packages/contracts/ignition/deployments/
 
-# Noir
-packages/circuits/eth_balance/target/
+# Noir circuit artifacts and private inputs
+**/Prover.toml
+packages/circuits/bin/eth_balance/target/
+packages/circuits/test/ethereum_test/target/
 
 # Environment & secrets
 .env

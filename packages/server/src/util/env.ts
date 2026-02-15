@@ -31,7 +31,7 @@ export function loadConfig(): ServerConfig {
   }
 
   return {
-    ethRpcUrl: requireEnv("ETH_RPC_URL"),
+    ethRpcUrl: requireEnv("ORIGIN_RPC_URL"),
     faucetPrivateKey: faucetPrivateKey as `0x${string}`,
     port: parseInt(optionalEnv("PORT", "3000"), 10),
     host: optionalEnv("HOST", "0.0.0.0"),

@@ -7,7 +7,7 @@ Privacy-preserving testnet faucet using ZK storage proofs. Users prove they hold
 ```bash
 bun install                # install deps
 bun run dev                # build frontend + start server (watch mode)
-bun run test               # run all tests (181 total)
+bun run test               # run all tests (184 total)
 ```
 
 ## Project Structure
@@ -68,7 +68,12 @@ MAX_PREFIXED_KEY_LEN = 66
 bun run eth_balance:generate   # fetch eth_getProof, generate Prover.toml
 bun run eth_balance:execute    # compile + execute witness (fast check)
 bun run eth_balance:prove      # generate + verify full ZK proof (~85s)
-nargo test                     # run circuit unit tests (5 tests)
+```
+
+Circuit unit tests must be run from individual crate directories (no workspace-level Nargo.toml):
+```bash
+cd packages/circuits/bin/eth_balance && nargo test   # 7 tests (circuit logic)
+cd packages/circuits/lib/ethereum && nargo test      # 7 tests (MPT/RLP lib)
 ```
 
 ### Ethereum Library (packages/circuits/lib/ethereum/)
@@ -108,10 +113,10 @@ Hono API with modular proof verification.
 
 ### Tests
 ```bash
-cd packages/server && bun test     # 61 tests
+cd packages/server && bun test     # 66 tests
 cd packages/contracts && npx hardhat test  # 11 tests
-cd packages/client && bun test     # 35 tests
-cd packages/e2e && bun test        # 38 tests
+cd packages/client && bun test     # 38 tests
+cd packages/e2e && bun test        # 69 tests
 ```
 
 ## Design Decisions
@@ -127,5 +132,17 @@ cd packages/e2e && bun test        # 38 tests
 
 ## Environment Variables
 
-Required: `ETH_RPC_URL`, `FAUCET_PRIVATE_KEY` (also `PRIVATE_KEY` for circuit scripts).
+Required: `ORIGIN_RPC_URL`, `FAUCET_PRIVATE_KEY` (also `PRIVATE_KEY` for circuit scripts).
 See `.env.example` for all options.
+
+### Per-Network RPC Overrides
+
+Target network RPC URLs from `networks.json` can be overridden via env vars at server startup.
+Pattern: `<NETWORK_ID>_RPC_URL` (uppercase, hyphens replaced with underscores).
+
+```
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
+HOLESKY_RPC_URL=https://eth-holesky.g.alchemy.com/v2/YOUR_KEY
+```
+
+The override is applied in `packages/server/src/index.ts` before networks are passed to `FundDispatcher`.

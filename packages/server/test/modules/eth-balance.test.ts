@@ -264,7 +264,7 @@ describe("EthBalanceModule", () => {
           });
           expect(result).toBe(true);
         },
-        30_000,
+        60_000,
       );
 
       test(

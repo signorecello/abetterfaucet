@@ -76,10 +76,10 @@ function bytesToDecimalStrings(bytes: Uint8Array): string[] {
 
 async function main() {
   const privateKey = process.env.PRIVATE_KEY;
-  const rpcUrl = process.env.ETH_RPC_URL;
+  const rpcUrl = process.env.ORIGIN_RPC_URL;
 
   if (!privateKey) throw new Error("PRIVATE_KEY env var required");
-  if (!rpcUrl) throw new Error("ETH_RPC_URL env var required");
+  if (!rpcUrl) throw new Error("ORIGIN_RPC_URL env var required");
 
   console.error("Generating ethereum_test Prover.toml...\n");
 

@@ -99,7 +99,7 @@ bun run --filter '@zk-faucet/circuits' test
 
 ### Generate Witness Inputs
 
-Requires `PRIVATE_KEY` and `ETH_RPC_URL` in `.env`:
+Requires `PRIVATE_KEY` and `ORIGIN_RPC_URL` in `.env`:
 
 ```bash
 cd eth_balance

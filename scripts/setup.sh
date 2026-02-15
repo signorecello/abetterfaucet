@@ -61,7 +61,7 @@ if [ -f ".env" ]; then
 else
   cp .env.example .env
   info ".env created from .env.example"
-  warn "Edit .env to set ETH_RPC_URL and FAUCET_PRIVATE_KEY before running the server"
+  warn "Edit .env to set ORIGIN_RPC_URL and FAUCET_PRIVATE_KEY before running the server"
 fi
 
 echo ""
@@ -93,7 +93,7 @@ echo ""
 info "Setup complete!"
 echo ""
 echo "  Next steps:"
-echo "    1. Edit .env with your ETH_RPC_URL and FAUCET_PRIVATE_KEY"
+echo "    1. Edit .env with your ORIGIN_RPC_URL and FAUCET_PRIVATE_KEY"
 echo "    2. Run: bun run dev"
 echo "    3. Open: http://localhost:3000"
 echo ""
