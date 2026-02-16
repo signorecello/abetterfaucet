@@ -17,6 +17,8 @@ packages/circuits/test/ethereum_test/target/
 .env
 .env.local
 .env.*.local
+packages/*/.env
+packages/*/.env.local
 
 # Database
 *.db

@@ -1,0 +1,32 @@
+{
+  "name": "@vlayer/monorepo",
+  "workspaces": [
+    "ethereum/oracles",
+    "ethereum/tests"
+  ],
+  "scripts": {
+    "build": "tsc --build --verbose",
+    "watch": "tsc --build --verbose --watch",
+    "check": "yarn format:all && yarn lint:all",
+    "lint:all": "yarn workspaces foreach --all --parallel --verbose run lint",
+    "format:all": "yarn workspaces foreach --all --parallel --verbose run format",
+    "format:all:ci": "yarn workspaces foreach --all --parallel --verbose run format:ci"
+  },
+  "packageManager": "yarn@4.12.0",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-standard-with-typescript": "^43.0.1",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^17.5.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "eslint-plugin-promise": "^6.1.1",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@changesets/cli": "^2.27.2"
+  }
+}

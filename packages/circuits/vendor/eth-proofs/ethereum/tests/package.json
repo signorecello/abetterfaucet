@@ -1,0 +1,28 @@
+{
+  "name": "noir-ethereum-api-e2e-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write src",
+    "format:ci": "prettier --check src"
+  },
+  "dependencies": {
+    "@noir-lang/noirc_abi": "1.0.0-beta.18",
+    "noir-ethereum-api-oracles": "^0.1.0",
+    "toml": "^3.0.0",
+    "viem": "^2.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.10",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "tsx": "^4.9.3",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

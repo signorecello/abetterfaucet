@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bun --env-file=../../.env --watch src/index.ts",
+    "dev": "bun --env-file=./.env --watch src/index.ts",
     "test": "bun test",
-    "start": "bun --env-file=../../.env src/index.ts"
+    "start": "bun --env-file=./.env src/index.ts"
   },
   "dependencies": {
     "@aztec/bb.js": "^2.1.11",

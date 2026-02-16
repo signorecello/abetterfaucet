@@ -9,7 +9,7 @@
  *   PRIVATE_KEY=0x... ORIGIN_RPC_URL=https://... bun run scripts/generate_prover_toml.ts
  *
  * Or load from project .env:
- *   bun --env-file=../../../../.env run scripts/generate_prover_toml.ts
+ *   bun --env-file=../../.env run scripts/generate_prover_toml.ts
  */
 
 import {
@@ -29,10 +29,10 @@ import { BarretenbergSync, Fr } from "@aztec/bb.js";
 
 // --- Config ---
 const EPOCH_DURATION = 604_800; // 1 week in seconds
-if (!process.env.VITE_MIN_BALANCE_WEI) {
-  throw new Error("Missing VITE_MIN_BALANCE_WEI env var");
+if (!process.env.MIN_BALANCE_WEI) {
+  throw new Error("Missing MIN_BALANCE_WEI env var");
 }
-const MIN_BALANCE_WEI = BigInt(process.env.VITE_MIN_BALANCE_WEI);
+const MIN_BALANCE_WEI = BigInt(process.env.MIN_BALANCE_WEI);
 
 // Circuit constants (must match lib/ethereum)
 const MAX_NODE_LEN = 532;
@@ -270,6 +270,12 @@ async function main() {
   tomlLines.push(`pubkey_x = ${bytesToTomlArray(pubkey_x)}`);
   tomlLines.push(`pubkey_y = ${bytesToTomlArray(pubkey_y)}`);
   tomlLines.push(`address = ${bytesToTomlArray(addressBytes)}`);
+  tomlLines.push(``);
+  tomlLines.push(`# Account fields (private, verified against MPT proof by eth-proofs)`);
+  tomlLines.push(`account_nonce = "${ethProof.nonce}"`);
+  tomlLines.push(`account_balance = ${fieldToDecimalString(balance)}`);
+  tomlLines.push(`account_storage_root = ${bytesToTomlArray(storageHashBytes)}`);
+  tomlLines.push(`account_code_hash = ${bytesToTomlArray(codeHashBytes)}`);
   tomlLines.push(``);
   tomlLines.push(`# MPT proof data (private)`);
   tomlLines.push(`proof_key = ${bytesToTomlArray(proofKey)}`);

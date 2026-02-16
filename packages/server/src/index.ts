@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { createPublicClient, http } from "viem";
-import { mainnet } from "viem/chains";
+import { mainnet, sepolia, holesky } from "viem/chains";
 import { loadConfig } from "./util/env";
 import { createLogger } from "./util/logger";
 import { AppError } from "./util/errors";
@@ -44,11 +44,16 @@ function getRateLimitKey(c: { req: { header: (name: string) => string | undefine
 
 // --- Initialize infrastructure ---
 
-// L1 public client for state root verification
+// Resolve origin chain from ORIGIN_CHAINID
+const originChainMap = { 1: mainnet, 11155111: sepolia, 17000: holesky } as const;
+const originChain = originChainMap[config.originChainId as keyof typeof originChainMap];
+
+// Origin chain public client for state root verification
 const l1Client = createPublicClient({
-  chain: mainnet,
+  chain: originChain,
   transport: http(config.ethRpcUrl),
 });
+logger.info({ chainId: config.originChainId, chainName: originChain.name }, "Origin chain configured");
 
 // State root oracle
 const oracle = new StateRootOracle(l1Client, logger);
@@ -141,6 +146,20 @@ app.get("/", async (c) => {
   return c.html(html);
 });
 
+// Verify ORIGIN_RPC_URL matches ORIGIN_CHAINID before starting
+l1Client.getChainId().then((rpcChainId) => {
+  if (rpcChainId !== config.originChainId) {
+    logger.error(
+      { expected: config.originChainId, actual: rpcChainId },
+      "ORIGIN_RPC_URL chain ID does not match ORIGIN_CHAINID! Fix your .env",
+    );
+    process.exit(1);
+  }
+  logger.info({ chainId: rpcChainId }, "RPC chain ID verified");
+}).catch((err) => {
+  logger.error({ err }, "Failed to verify RPC chain ID");
+});
+
 // Start the oracle and server
 oracle.start().then(() => {
   logger.info("State root oracle started");
@@ -148,7 +167,10 @@ oracle.start().then(() => {
   logger.warn({ err }, "State root oracle failed to start (will retry on next interval)");
 });
 
-logger.info({ port: config.port, host: config.host }, "Starting zk_faucet server");
+logger.info(
+  { port: config.port, host: config.host, originChainId: config.originChainId, minBalanceWei: config.minBalanceWei.toString() },
+  "Starting zk_faucet server",
+);
 
 export default {
   port: config.port,

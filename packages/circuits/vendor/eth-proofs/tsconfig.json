@@ -1,0 +1,4 @@
+{
+  "files": [],
+  "references": [{ "path": "ethereum/oracles/tsconfig.json" }, { "path": "ethereum/tests/tsconfig.json" }]
+}

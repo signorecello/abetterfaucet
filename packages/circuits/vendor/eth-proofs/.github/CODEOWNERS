@@ -1,0 +1,7 @@
+# Each change should be approved by one of two code owners
+
+- @marekkirejczyk @LogvinovLeon
+
+# Marek Kirejczyk is an owner of this CODEOWNERS file so that he is required to approve any changes in code ownership.
+
+/.github/CODEOWNERS @marekkirejczyk

@@ -24,10 +24,10 @@
 use std::ecdsa_secp256k1;
 use keccak256::keccak256;
 use poseidon::poseidon2::Poseidon2;
-use ethereum::account::verify_account_balance;
-use ethereum::account::MAX_PREFIXED_KEY_LEN;
-use ethereum::mpt::{Proof, ProofInput, MAX_NODE_LEN, MAX_ACCOUNT_LEAF_LEN, MAX_ACCOUNT_STATE_LEN, MAX_ACCOUNT_DEPTH};
-use ethereum::types::Address;
+use ethereum::account::{Account, MAX_PREFIXED_KEY_NIBBLE_LEN, MAX_ACCOUNT_DEPTH_NO_LEAF_M, MAX_ACCOUNT_STATE_LEN, MAX_ACCOUNT_LEAF_LEN};
+use ethereum::verifiers::account::verify_account;
+use ethereum::merkle_patricia_proofs::proof::{Proof, ProofInput, MAX_NODE_LEN};
+use ethereum::misc::types::Address;
 
 // Convert a 32-byte array to a Field element (big-endian)
 fn bytes32_to_field(bytes: [u8; 32]) -> Field {
@@ -166,12 +166,17 @@ fn main(
     pubkey_y: [u8; 32],
     // Ethereum address (derived from pubkey, verified in-circuit)
     address: Address,
+    // Account fields (verified against MPT proof by eth-proofs)
+    account_nonce: u64,
+    account_balance: Field,
+    account_storage_root: [u8; 32],
+    account_code_hash: [u8; 32],
     // MPT account proof data
-    proof_key: [u8; MAX_PREFIXED_KEY_LEN],
+    proof_key: [u8; MAX_PREFIXED_KEY_NIBBLE_LEN],
     proof_value: [u8; MAX_ACCOUNT_STATE_LEN],
-    proof_nodes: [[u8; MAX_NODE_LEN]; MAX_ACCOUNT_DEPTH],
+    proof_nodes: [[u8; MAX_NODE_LEN]; MAX_ACCOUNT_DEPTH_NO_LEAF_M],
     proof_leaf: [u8; MAX_ACCOUNT_LEAF_LEN],
-    proof_depth: u32,
+    proof_depth: u64,
     // === Public inputs ===
     // State root from a recent L1 block (server verifies recency)
     state_root: pub [u8; 32],
@@ -188,7 +193,13 @@ fn main(
     // 3. Address derivation from public key
     verify_address_from_pubkey(pubkey_x, pubkey_y, address);
 
-    // 4. MPT account proof verification -- extracts verified balance from state trie
+    // 4. MPT account proof verification via eth-proofs
+    let account = Account {
+        nonce: account_nonce,
+        balance: account_balance,
+        storage_root: account_storage_root,
+        code_hash: account_code_hash,
+    };
     let proof = Proof {
         nodes: proof_nodes,
         leaf: proof_leaf,
@@ -199,10 +210,10 @@ fn main(
         value: proof_value,
         proof,
     };
-    let balance = verify_account_balance(address, state_root, proof_input);
+    verify_account(address, account, proof_input, state_root);
 
     // 5. Balance check (cast to u64 -- sufficient for ETH amounts up to ~18.4 ETH)
-    assert(balance as u64 >= min_balance as u64, "Balance below minimum threshold");
+    assert(account.balance as u64 >= min_balance as u64, "Balance below minimum threshold");
 
     // 6. Nullifier derivation from PUBLIC KEY (deterministic regardless of ECDSA nonce)
     let pubkey_x_field = bytes32_to_field(pubkey_x);

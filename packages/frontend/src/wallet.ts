@@ -67,6 +67,10 @@ if (!minBalanceRaw) {
 }
 export const MIN_BALANCE_WEI = BigInt(minBalanceRaw);
 
+console.log(
+  `[zk_faucet] config: VITE_ORIGIN_CHAINID=${originChainId} (${originChain.name}), VITE_MIN_BALANCE_WEI=${minBalanceRaw}`,
+);
+
 /**
  * Initialize the wallet module.
  * Must be called before connectWallet().

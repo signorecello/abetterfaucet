@@ -488,6 +488,11 @@ async function handleClaim() {
     let storageProof;
     try {
       storageProof = await getStorageProof(wallet.address);
+      console.log("[zk_faucet] Storage proof fetched:", {
+        stateRoot: storageProof.stateRoot,
+        blockNumber: storageProof.blockNumber,
+        balance: storageProof.balance,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       showErrorWithHint(
@@ -545,6 +550,13 @@ async function handleClaim() {
     // --- Step 4: Submit claim ---
     updateStepIndicator(5);
     showProvingProgress(progressContainer, "Submitting claim...", "Sending proof to the faucet");
+
+    console.log("[zk_faucet] Submitting claim with publicInputs:", {
+      stateRoot: proofResult.publicInputs.stateRoot,
+      epoch: proofResult.publicInputs.epoch,
+      minBalance: proofResult.publicInputs.minBalance,
+      nullifier: proofResult.publicInputs.nullifier,
+    });
 
     const result = await api.submitClaim({
       moduleId: mod.id,

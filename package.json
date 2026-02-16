@@ -8,9 +8,9 @@
     "dev": "bun run build:frontend && bun run --elide-lines 2000 --filter server dev",
     "build:frontend": "bun run --filter frontend build",
     "test": "bun run --filter '*' test",
+    "test:circuits": "bun run --filter circuits test",
     "test:unit": "bun run --filter server test",
     "test:e2e": "bun run --filter e2e test",
-    "compile:circuits": "bun run --filter circuits compile",
     "setup": "bash scripts/setup.sh"
   }
 }

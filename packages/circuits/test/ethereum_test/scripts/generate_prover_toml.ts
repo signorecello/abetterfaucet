@@ -5,7 +5,7 @@
  * Calls eth_getProof on a real network to obtain MPT account proof data.
  *
  * Usage:
- *   bun --env-file=../../../.env run scripts/generate_prover_toml.ts
+ *   bun --env-file=../../.env run scripts/generate_prover_toml.ts
  */
 
 import { writeFileSync } from "fs";

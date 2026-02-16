@@ -1,5 +1,6 @@
 export interface ServerConfig {
   ethRpcUrl: string;
+  originChainId: number;
   faucetPrivateKey: `0x${string}`;
   port: number;
   host: string;
@@ -30,8 +31,14 @@ export function loadConfig(): ServerConfig {
     throw new Error("FAUCET_PRIVATE_KEY must start with 0x");
   }
 
+  const originChainId = parseInt(requireEnv("ORIGIN_CHAINID"), 10);
+  if (![1, 11155111, 17000].includes(originChainId)) {
+    throw new Error(`Unsupported ORIGIN_CHAINID: ${originChainId}. Must be 1, 11155111, or 17000`);
+  }
+
   return {
     ethRpcUrl: requireEnv("ORIGIN_RPC_URL"),
+    originChainId,
     faucetPrivateKey: faucetPrivateKey as `0x${string}`,
     port: parseInt(optionalEnv("PORT", "3000"), 10),
     host: optionalEnv("HOST", "0.0.0.0"),
@@ -40,7 +47,7 @@ export function loadConfig(): ServerConfig {
     rateLimitWindowMs: parseInt(optionalEnv("RATE_LIMIT_WINDOW_MS", "60000"), 10),
     dispensationAmountEth: optionalEnv("DISPENSATION_AMOUNT", "0.1"),
     epochDuration: parseInt(optionalEnv("EPOCH_DURATION", "604800"), 10),
-    minBalanceWei: BigInt(requireEnv("VITE_MIN_BALANCE_WEI")),
+    minBalanceWei: BigInt(requireEnv("MIN_BALANCE_WEI")),
     dbPath: optionalEnv("DB_PATH", "./data/nullifiers.db"),
   };
 }

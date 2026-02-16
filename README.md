@@ -130,7 +130,7 @@ Verifies a Merkle-Patricia Trie inclusion proof against the public `state_root`,
 
 ### Constraint 5: Balance Check
 
-Asserts `verified_balance >= min_balance` where `min_balance` is a public input (configured via `VITE_MIN_BALANCE_WEI`).
+Asserts `verified_balance >= min_balance` where `min_balance` is a public input (configured via `MIN_BALANCE_WEI` / `VITE_MIN_BALANCE_WEI`).
 
 ### Constraint 6: Nullifier Derivation
 
@@ -206,17 +206,28 @@ bun install
 
 ### Environment Setup
 
+Each package has its own `.env` file. Copy the examples and fill in the required values:
+
 ```bash
-cp .env.example .env
+cp .env.example .env                                # Frontend (VITE_* vars)
+cp packages/server/.env.example packages/server/.env  # Server
+cp packages/circuits/.env.example packages/circuits/.env  # Circuit testing
 ```
 
-Edit `.env` and set the required values:
+**Root `.env`** (frontend — Vite inlines `VITE_*` at build time):
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_ORIGIN_CHAINID` | **Yes** | Origin chain ID: `1` (mainnet), `11155111` (sepolia), `17000` (holesky) |
+| `VITE_MIN_BALANCE_WEI` | **Yes** | Minimum balance threshold in wei |
+
+**`packages/server/.env`** (server-only, uses non-VITE_ names):
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VITE_ORIGIN_CHAINID` | **Yes** | -- | Origin chain ID: `1` (mainnet), `11155111` (sepolia), `17000` (holesky). Shared by frontend (Vite build-time) and all packages. |
-| `VITE_MIN_BALANCE_WEI` | **Yes** | -- | Minimum balance threshold in wei. Shared by frontend (Vite build-time) and all packages. |
-| `ORIGIN_RPC_URL` | **Yes** | -- | Origin chain RPC URL (server-only, used for state root verification; never exposed to browser) |
+| `ORIGIN_CHAINID` | **Yes** | -- | Origin chain ID (must match `ORIGIN_RPC_URL`) |
+| `MIN_BALANCE_WEI` | **Yes** | -- | Minimum balance threshold in wei |
+| `ORIGIN_RPC_URL` | **Yes** | -- | Origin chain RPC URL (for state root verification) |
 | `FAUCET_PRIVATE_KEY` | **Yes** | -- | 0x-prefixed private key of the wallet holding testnet funds |
 | `PORT` | No | `3000` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
@@ -227,14 +238,14 @@ Edit `.env` and set the required values:
 | `EPOCH_DURATION` | No | `604800` | Epoch length in seconds (default: 1 week) |
 | `DB_PATH` | No | `./data/nullifiers.db` | SQLite database path for nullifiers |
 
-#### Circuit Scripts
+**`packages/circuits/.env`** (circuit testing — can target a different chain than server/frontend):
 
-For circuit scripts (e.g. `generate_prover_toml.ts`), you also need:
-
-| Variable | Context | Description |
+| Variable | Required | Description |
 |----------|---------|-------------|
-| `PRIVATE_KEY` | Circuit scripts | 0x-prefixed private key (the address to prove balance for) |
-| `ORIGIN_RPC_URL` | Circuit scripts | Origin chain RPC URL (used by `generate_prover_toml.ts`) |
+| `ORIGIN_CHAINID` | **Yes** | Chain ID for proof generation (e.g. `11155111` for Sepolia) |
+| `MIN_BALANCE_WEI` | **Yes** | Minimum balance threshold in wei |
+| `ORIGIN_RPC_URL` | **Yes** | RPC URL for the target chain |
+| `PRIVATE_KEY` | **Yes** | 0x-prefixed private key (the address to prove balance for) |
 
 ### Compile the Circuit
 
@@ -251,8 +262,10 @@ This produces `target/eth_balance.json`, required by the server for proof verifi
 
 ```bash
 bun install
-cp .env.example .env
-# Edit .env with VITE_ORIGIN_CHAINID, VITE_MIN_BALANCE_WEI, ORIGIN_RPC_URL, and FAUCET_PRIVATE_KEY
+cp .env.example .env                                  # Frontend env
+cp packages/server/.env.example packages/server/.env    # Server env
+cp packages/circuits/.env.example packages/circuits/.env  # Circuit env
+# Edit each .env with required values
 bun run dev
 # Open http://localhost:3000
 ```
@@ -278,7 +291,7 @@ This runs `bun run build:frontend` (Vite build to `packages/frontend/dist/`) fol
 
 ```bash
 cd packages/server
-bun --env-file=../../.env src/index.ts
+bun --env-file=./.env src/index.ts
 ```
 
 ### Individual Packages
@@ -291,7 +304,7 @@ cd packages/frontend && bun run build
 cd packages/frontend && bun run dev
 
 # Server only (watch mode)
-cd packages/server && bun --env-file=../../.env --watch src/index.ts
+cd packages/server && bun --env-file=./.env --watch src/index.ts
 
 ```
 
@@ -531,7 +544,7 @@ This library has no external dependencies beyond `keccak256`. It was written fro
 | `MAX_ACCOUNT_STATE_LEN` | 110 bytes | Maximum size of an RLP-encoded account state |
 | `MAX_ACCOUNT_DEPTH` | 10 | Maximum MPT proof depth (internal nodes only) |
 | `MAX_PREFIXED_KEY_LEN` | 66 bytes | Left-padded keccak256(address) key buffer |
-| `VITE_MIN_BALANCE_WEI` | (from env) | Minimum balance threshold, shared across all packages |
+| `MIN_BALANCE_WEI` | (from env) | Minimum balance threshold (per-package .env) |
 | `EPOCH_DURATION_SECONDS` | 604,800 (1 week) | Default epoch length |
 | `MAX_STATE_ROOT_AGE_BLOCKS` | 256 | Maximum age of accepted state roots |
 | `EPOCH_PAD_LENGTH` | 10 | Digits used for zero-padded epoch in domain message |

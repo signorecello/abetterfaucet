@@ -2,13 +2,13 @@
   "name": "@zk-faucet/circuits",
   "private": true,
   "scripts": {
-    "storage_proof_test:generate": "cd test/ethereum_test && bun --env-file=../../../../.env run scripts/generate_prover_toml.ts > Prover.toml",
+    "storage_proof_test:generate": "cd test/ethereum_test && bun --env-file=../../.env run scripts/generate_prover_toml.ts > Prover.toml",
     "storage_proof_test:execute": "cd test/ethereum_test && nargo execute",
-    "storage_proof_test:prove": "cd test/ethereum_test && bun --env-file=../../../.env run scripts/prove.ts",
-    
-    "eth_balance:generate": "cd bin/eth_balance && bun --env-file=../../../../.env run scripts/generate_prover_toml.ts > Prover.toml",
+    "storage_proof_test:prove": "cd test/ethereum_test && bun --env-file=../../.env run scripts/prove.ts",
+
+    "eth_balance:generate": "cd bin/eth_balance && bun --env-file=../../.env run scripts/generate_prover_toml.ts > Prover.toml",
     "eth_balance:execute": "cd bin/eth_balance && nargo execute",
-    "eth_balance:prove": "cd bin/eth_balance && bun --env-file=../../../.env run scripts/prove.ts"
+    "eth_balance:prove": "cd bin/eth_balance && bun --env-file=../../.env run scripts/prove.ts"
   },
   "dependencies": {
     "@aztec/bb.js": "^2.1.11",

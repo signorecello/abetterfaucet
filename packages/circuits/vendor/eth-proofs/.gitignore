@@ -1,0 +1,17 @@
+dist
+target
+proofs
+contract
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+dist
+coverage
+.DS_Store
+.vscode/
+
+# Generated Solidity verifiers (created in CI)
+ethereum/contracts/src/generated-verifier/*.sol

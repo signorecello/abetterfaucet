@@ -235,6 +235,12 @@ export async function generateProofInBrowser(
     pubkey_x: bytesToInputArray(pubkey_x),
     pubkey_y: bytesToInputArray(pubkey_y),
     address: bytesToInputArray(addressBytes),
+    // Account fields (verified against MPT proof by eth-proofs)
+    account_nonce: storageProof.nonce.toString(),
+    account_balance: BigInt(storageProof.balance).toString(),
+    account_storage_root: bytesToInputArray(storageHashBytes),
+    account_code_hash: bytesToInputArray(codeHashBytes),
+    // MPT proof data
     proof_key: bytesToInputArray(proofKey),
     proof_value: bytesToInputArray(proofValue),
     proof_nodes: paddedNodes.map(bytesToInputArray),

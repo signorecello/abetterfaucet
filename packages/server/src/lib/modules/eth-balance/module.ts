@@ -43,7 +43,11 @@ export class EthBalanceModule implements ProofModule {
     }
 
     // Verify the state root is recent and valid
+    const latestCached = await this.oracle.getLatestStateRoot();
+    console.log("[DEBUG validatePublicInputs] Requested stateRoot:", inputs.stateRoot);
+    console.log("[DEBUG validatePublicInputs] Latest cached stateRoot:", latestCached.stateRoot, "block:", latestCached.blockNumber.toString());
     const isValid = await this.oracle.isValidStateRoot(inputs.stateRoot);
+    console.log("[DEBUG validatePublicInputs] isValid:", isValid);
     if (!isValid) {
       return {
         valid: false,

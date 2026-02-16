@@ -7,7 +7,7 @@ Privacy-preserving testnet faucet using ZK storage proofs. Users prove they hold
 ```bash
 bun install                # install deps
 bun run dev                # build frontend + start server (watch mode)
-bun run test               # run all tests (135 total)
+bun run test               # run all tests (132 pass + 3 skip)
 ```
 
 ## Project Structure
@@ -16,7 +16,7 @@ Bun workspaces monorepo with 4 packages:
 
 ```
 packages/
-  circuits/    # Noir ZK circuits + ethereum MPT library
+  circuits/    # Noir ZK circuits (uses noir-lang/eth-proofs for MPT verification)
   server/      # Hono API server (Bun runtime)
   frontend/    # Vanilla TS/CSS SPA (Vite build, wallet integration)
   e2e/         # End-to-end integration tests
@@ -50,16 +50,16 @@ The circuit computes the message hash in-circuit from the public epoch input:
 - Hash: `keccak256(eip191_message)`
 
 ### Circuit Inputs
-- **Private**: sig_r, sig_s, pubkey_x, pubkey_y, address, proof_key, proof_value, proof_nodes, proof_leaf, proof_depth
+- **Private**: sig_r, sig_s, pubkey_x, pubkey_y, address, account_nonce, account_balance, account_storage_root, account_code_hash, proof_key, proof_value, proof_nodes, proof_leaf, proof_depth
 - **Public**: state_root (32 bytes), epoch, min_balance, nullifier
 
-### Circuit Constants (from lib/ethereum)
+### Circuit Constants (from eth-proofs)
 ```
 MAX_NODE_LEN = 532
 MAX_ACCOUNT_LEAF_LEN = 148
 MAX_ACCOUNT_STATE_LEN = 110
-MAX_ACCOUNT_DEPTH = 10
-MAX_PREFIXED_KEY_LEN = 66
+MAX_ACCOUNT_DEPTH_NO_LEAF_M = 10
+MAX_PREFIXED_KEY_NIBBLE_LEN = 66
 ```
 
 ### Circuit Commands (run from packages/circuits/)
@@ -72,15 +72,16 @@ bun run eth_balance:prove      # generate + verify full ZK proof (~85s)
 Circuit unit tests must be run from individual crate directories (no workspace-level Nargo.toml):
 ```bash
 cd packages/circuits/bin/eth_balance && nargo test   # 7 tests (circuit logic)
-cd packages/circuits/lib/ethereum && nargo test      # 7 tests (MPT/RLP lib)
 ```
 
-### Ethereum Library (packages/circuits/lib/ethereum/)
-Custom Noir library (no external deps beyond keccak256) providing:
-- `mpt.nr` - Full Merkle-Patricia Trie proof verification
-- `account.nr` - Account balance extraction via `verify_account_balance()`
-- `rlp.nr` - RLP decoding
-- `bytes.nr`, `fragment.nr`, `arrays.nr` - Utilities
+### Ethereum Library (vendored eth-proofs)
+Uses `noir-lang/eth-proofs` (vendored at `packages/circuits/vendor/eth-proofs/`) with visibility patches (`pub(crate)` -> `pub`) for:
+- `verifiers` and `merkle_patricia_proofs` modules in `lib.nr`
+- `Account` struct fields in `account_with_storage.nr`
+- `Proof`/`ProofInput` struct fields and constants in `merkle_patricia_proofs/proof.nr`
+- Constants in `account.nr`
+
+API: `verify_account(address, account, proof_input, state_root)` verifies the Account struct matches the MPT proof.
 
 ### Test Circuit
 `packages/circuits/test/ethereum_test/` - Standalone MPT proof test circuit.
@@ -134,7 +135,7 @@ Vanilla TS SPA built with Vite. Wallet integration via `@wagmi/core`.
 
 - **Nullifier**: `poseidon2(pubkey_x, pubkey_y, epoch)` using recovered public key (deterministic, avoids PLUME dependency)
 - **Noir comments**: ASCII only (no unicode arrows/dashes)
-- **MPT proof**: Custom Noir implementation (not vlayer -- vlayer not ported to nargo 1.0.0)
+- **MPT proof**: Uses `noir-lang/eth-proofs` library (vendored with visibility patches)
 - **TOML arrays**: `generate_prover_toml.ts` outputs hex byte arrays (`[0x05, 0x8b, ...]`); 2D arrays for `proof_nodes`
 - **Epoch padding**: Epoch is zero-padded to 10 digits in domain message for fixed-length in-circuit computation
 - **In-circuit message hash**: `message_hash` is computed in-circuit from epoch (prevents signature replay attacks)
@@ -144,16 +145,28 @@ Vanilla TS SPA built with Vite. Wallet integration via `@wagmi/core`.
 
 ## Environment Variables
 
-### Shared (VITE_ prefix — used by frontend, server, and circuit scripts)
+Each package has its own `.env` file with the variables it needs:
+
+### Root `.env` (frontend — Vite inlines VITE_* at build time)
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VITE_ORIGIN_CHAINID` | **Yes** | Origin chain ID (1, 11155111, 17000) |
 | `VITE_MIN_BALANCE_WEI` | **Yes** | Minimum balance threshold in wei |
 
-### Server-only
+### `packages/server/.env`
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `ORIGIN_CHAINID` | **Yes** | Origin chain ID (1, 11155111, 17000) |
+| `MIN_BALANCE_WEI` | **Yes** | Minimum balance threshold in wei |
 | `ORIGIN_RPC_URL` | **Yes** | Origin chain RPC URL (for state root verification) |
 | `FAUCET_PRIVATE_KEY` | **Yes** | 0x-prefixed private key holding testnet funds |
 
-See `.env.example` for all options.
+### `packages/circuits/.env`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ORIGIN_CHAINID` | **Yes** | Chain ID for proof generation (can differ from server) |
+| `MIN_BALANCE_WEI` | **Yes** | Minimum balance threshold in wei |
+| `ORIGIN_RPC_URL` | **Yes** | RPC URL for the target chain |
+| `PRIVATE_KEY` | **Yes** | Private key of account to prove balance for |
+
+See per-package `.env.example` files for all options.
