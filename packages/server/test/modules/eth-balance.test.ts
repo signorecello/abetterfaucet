@@ -5,9 +5,8 @@ import { EthBalanceModule } from "../../src/lib/modules/eth-balance/module";
 import { encodePublicInputs, resetBackend } from "../../src/lib/modules/eth-balance/verifier";
 import type { StateRootOracle } from "../../src/lib/state-root-oracle";
 import type { PublicInputs } from "../../src/lib/modules/types";
-import { EPOCH_DURATION_SECONDS } from "../../src/lib/modules/eth-balance/constants";
-
 const MIN_BALANCE_WEI = 10_000_000_000_000_000n;
+const DEFAULT_EPOCH_DURATION = 604_800;
 
 const FIXTURE_PATH = resolve(
   import.meta.dir,
@@ -50,12 +49,12 @@ describe("EthBalanceModule", () => {
   });
 
   test("currentEpoch returns correct value", () => {
-    const expected = Math.floor(Date.now() / 1000 / EPOCH_DURATION_SECONDS);
+    const expected = Math.floor(Date.now() / 1000 / DEFAULT_EPOCH_DURATION);
     expect(module.currentEpoch()).toBe(expected);
   });
 
-  test("epochDurationSeconds defaults to EPOCH_DURATION_SECONDS", () => {
-    expect(module.epochDurationSeconds).toBe(EPOCH_DURATION_SECONDS);
+  test("epochDurationSeconds defaults to 604800 (1 week)", () => {
+    expect(module.epochDurationSeconds).toBe(DEFAULT_EPOCH_DURATION);
   });
 
   test("currentEpoch respects custom epoch duration", () => {

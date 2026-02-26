@@ -1,7 +1,6 @@
 import type { ProofModule, PublicInputs, ValidationResult } from "../types";
 import type { StateRootOracle } from "../../state-root-oracle";
 import { verifyProof } from "./verifier";
-import { EPOCH_DURATION_SECONDS } from "./constants";
 
 export class EthBalanceModule implements ProofModule {
   readonly id = "eth-balance";
@@ -15,7 +14,7 @@ export class EthBalanceModule implements ProofModule {
 
   constructor(oracle: StateRootOracle, options: { epochDuration?: number; minBalance: bigint }) {
     this.oracle = oracle;
-    this.epochDurationSeconds = options?.epochDuration ?? EPOCH_DURATION_SECONDS;
+    this.epochDurationSeconds = options?.epochDuration ?? 604_800;
     this.minBalance = options.minBalance;
   }
 
