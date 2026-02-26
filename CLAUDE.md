@@ -156,26 +156,34 @@ React 19 SPA built with Vite. Wallet integration via Reown AppKit + wagmi v3.
 
 ## Environment Variables
 
-Each package has its own `.env` file with the variables it needs:
+Shared config lives in the root `.env` (single source of truth). The server loads both root and local `.env` via `--env-file` flags in package.json. Vite reads root `.env` via `envDir: '../..'`. VITE_ aliases use `$VAR` expansion to avoid duplication.
 
-### Root `.env` (frontend — Vite inlines VITE_* at build time)
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `VITE_ORIGIN_CHAINID` | **Yes** | Origin chain ID (1, 11155111, 17000) |
-| `VITE_MIN_BALANCE_WEI` | **Yes** | Minimum balance threshold in wei |
-| `VITE_REOWN_PROJECT_ID` | No | Reown project ID for WalletConnect (get from cloud.reown.com) |
-
-### `packages/server/.env`
+### Root `.env` — shared config + frontend aliases
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `ORIGIN_CHAINID` | **Yes** | Origin chain ID (1, 11155111, 17000) |
 | `MIN_BALANCE_WEI` | **Yes** | Minimum balance threshold in wei |
-| `ORIGIN_RPC_URL` | **Yes** | Origin chain RPC URL (for state root verification) |
-| `FAUCET_PRIVATE_KEY` | **Yes** | 0x-prefixed private key holding testnet funds |
-| `ALLOWED_ORIGINS` | No | Comma-separated CORS origins (default: `*`) |
-| `LOG_LEVEL` | No | Pino log level: `debug`, `info`, `warn`, `error` (default: `info`) |
+| `EPOCH_DURATION` | No | Epoch duration in seconds (default: 604800 = 1 week) |
+| `ORIGIN_RPC_URL` | **Yes** | Origin chain RPC URL (for server state root verification) |
+| `VITE_ORIGIN_CHAINID` | auto | `$ORIGIN_CHAINID` (Vite alias) |
+| `VITE_MIN_BALANCE_WEI` | auto | `$MIN_BALANCE_WEI` (Vite alias) |
+| `VITE_EPOCH_DURATION` | auto | `$EPOCH_DURATION` (Vite alias) |
+| `VITE_REOWN_PROJECT_ID` | No | Reown project ID for WalletConnect (get from cloud.reown.com) |
 
-### `packages/circuits/.env`
+### `packages/server/.env` — server-specific only
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `FAUCET_PRIVATE_KEY` | **Yes** | 0x-prefixed private key holding testnet funds |
+| `PORT` | No | Server port (default: 3000) |
+| `HOST` | No | Server host (default: 0.0.0.0) |
+| `LOG_LEVEL` | No | Pino log level: `debug`, `info`, `warn`, `error` (default: `info`) |
+| `ALLOWED_ORIGINS` | No | Comma-separated CORS origins (default: `*`) |
+| `DB_PATH` | No | SQLite database path (default: `./data/nullifiers.db`) |
+| `SEPOLIA_RPC_URL` | No | Sepolia RPC URL (falls back to public RPC) |
+
+The server loads root `.env` first (shared vars), then local `.env` (server-specific). Local can override shared if needed.
+
+### `packages/circuits/.env` — self-contained (independent chain target)
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `ORIGIN_CHAINID` | **Yes** | Chain ID for proof generation (can differ from server) |
