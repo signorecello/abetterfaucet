@@ -1,140 +1,57 @@
 import type { PublicClient } from "viem";
 import type { Logger } from "../util/logger";
-import { MAX_STATE_ROOT_AGE_BLOCKS } from "./modules/eth-balance/constants";
-
-interface CachedStateRoot {
-  blockNumber: bigint;
-  stateRoot: string;
-}
+import { MAX_STATE_ROOT_AGE_MS } from "./modules/eth-balance/constants";
 
 export class StateRootOracle {
   private client: PublicClient;
   private logger: Logger;
-  private cache: CachedStateRoot[] = [];
-  private refreshInterval: ReturnType<typeof setInterval> | null = null;
-  private maxAge: number;
-  private blockTimeMs: number;
 
-  constructor(client: PublicClient, logger: Logger, maxAge: number = MAX_STATE_ROOT_AGE_BLOCKS, blockTimeMs: number = 12_000) {
+  constructor(client: PublicClient, logger: Logger) {
     this.client = client;
     this.logger = logger;
-    this.maxAge = maxAge;
-    this.blockTimeMs = blockTimeMs;
-  }
-
-  async start(): Promise<void> {
-    await this.refresh();
-    this.refreshInterval = setInterval(() => {
-      this.refresh().catch((err) => {
-        this.logger.error({ err }, "Failed to refresh state roots");
-      });
-    }, this.blockTimeMs);
-  }
-
-  stop(): void {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = null;
-    }
-  }
-
-  private async refresh(): Promise<void> {
-    const block = await this.client.getBlock({ blockTag: "latest" });
-    if (!block.stateRoot) {
-      this.logger.warn("Block missing stateRoot field");
-      return;
-    }
-
-    const existing = this.cache.find((c) => c.blockNumber === block.number);
-    if (existing) return;
-
-    // Find the highest cached block to detect gaps
-    const lastCached = this.cache.length > 0
-      ? this.cache.reduce((max, c) => c.blockNumber > max ? c.blockNumber : max, 0n)
-      : null;
-
-    // Backfill any skipped blocks between last cached and current
-    if (lastCached !== null && block.number > lastCached + 1n) {
-      const gapStart = lastCached + 1n;
-      const gapEnd = block.number - 1n;
-      // Cap backfill to avoid flooding RPC on first large gap
-      const maxBackfill = 10n;
-      const fillFrom = gapEnd - maxBackfill + 1n > gapStart ? gapEnd - maxBackfill + 1n : gapStart;
-
-      const fetches: Promise<void>[] = [];
-      for (let n = fillFrom; n <= gapEnd; n++) {
-        const blockNum = n;
-        fetches.push(
-          this.client.getBlock({ blockNumber: blockNum }).then((b) => {
-            if (b.stateRoot && !this.cache.find((c) => c.blockNumber === b.number)) {
-              this.cache.push({ blockNumber: b.number, stateRoot: b.stateRoot });
-            }
-          }).catch((err) => {
-            this.logger.debug({ blockNumber: blockNum.toString(), err }, "Failed to backfill block");
-          }),
-        );
-      }
-      if (fetches.length > 0) {
-        await Promise.all(fetches);
-        this.logger.debug(
-          { from: fillFrom.toString(), to: gapEnd.toString(), count: fetches.length },
-          "Backfilled missed blocks",
-        );
-      }
-    }
-
-    // Add the latest block
-    this.cache.push({
-      blockNumber: block.number,
-      stateRoot: block.stateRoot,
-    });
-
-    // Prune entries older than maxAge blocks
-    const minBlock = block.number - BigInt(this.maxAge);
-    this.cache = this.cache.filter((c) => c.blockNumber >= minBlock);
-
-    this.logger.debug(
-      {
-        blockNumber: block.number.toString(),
-        stateRoot: block.stateRoot,
-        cacheSize: this.cache.length,
-      },
-      "State root cache updated",
-    );
   }
 
   async getLatestStateRoot(): Promise<{ blockNumber: bigint; stateRoot: string }> {
-    if (this.cache.length === 0) {
-      await this.refresh();
+    const block = await this.client.getBlock({ blockTag: "latest" });
+    if (!block.stateRoot) {
+      throw new Error("Latest block missing stateRoot field");
     }
-    if (this.cache.length === 0) {
-      throw new Error("No state roots available");
-    }
-    // Return the most recent cached entry
-    return this.cache[this.cache.length - 1];
+    return { blockNumber: block.number, stateRoot: block.stateRoot };
   }
 
-  async isValidStateRoot(stateRoot: string): Promise<boolean> {
-    if (this.cache.length === 0) {
-      await this.refresh();
+  async isValidStateRoot(stateRoot: string, blockNumber: bigint): Promise<boolean> {
+    const block = await this.client.getBlock({ blockNumber });
+    if (!block.stateRoot) {
+      this.logger.warn({ blockNumber: blockNumber.toString() }, "Block missing stateRoot field");
+      return false;
     }
-    const normalizedInput = stateRoot.toLowerCase();
-    const match = this.cache.some((c) => c.stateRoot.toLowerCase() === normalizedInput);
-    if (!match) {
-      const latest = this.cache.length > 0 ? this.cache[this.cache.length - 1] : null;
-      const oldest = this.cache.length > 0 ? this.cache[0] : null;
+
+    if (block.stateRoot.toLowerCase() !== stateRoot.toLowerCase()) {
       this.logger.warn(
         {
-          requestedStateRoot: stateRoot,
-          cacheSize: this.cache.length,
-          latestCachedBlock: latest?.blockNumber.toString(),
-          latestCachedRoot: latest?.stateRoot,
-          oldestCachedBlock: oldest?.blockNumber.toString(),
-          oldestCachedRoot: oldest?.stateRoot,
+          blockNumber: blockNumber.toString(),
+          expectedStateRoot: stateRoot,
+          actualStateRoot: block.stateRoot,
         },
-        "State root not found in cache",
+        "State root mismatch for block",
       );
+      return false;
     }
-    return match;
+
+    const blockTimeMs = Number(block.timestamp) * 1000;
+    const ageMs = Date.now() - blockTimeMs;
+    if (ageMs > MAX_STATE_ROOT_AGE_MS) {
+      this.logger.warn(
+        {
+          blockNumber: blockNumber.toString(),
+          ageMs,
+          maxAgeMs: MAX_STATE_ROOT_AGE_MS,
+        },
+        "Block too old",
+      );
+      return false;
+    }
+
+    return true;
   }
 }

@@ -29,6 +29,7 @@ export interface ProofResult {
     epoch: number;
     minBalance: string; // decimal string
     nullifier: string; // decimal string
+    blockNumber: string; // decimal string
   };
 }
 
@@ -248,6 +249,7 @@ export async function generateProofInBrowser(
       epoch,
       minBalance: minBalance.toString(),
       nullifier: '0x' + nullifier_bigint.toString(16),
+      blockNumber: storageProof.blockNumber,
     },
   };
 }

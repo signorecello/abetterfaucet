@@ -27,7 +27,7 @@ function createMockOracle(opts: { validStateRoots?: string[] } = {}): StateRootO
     getLatestStateRoot: mock(() =>
       Promise.resolve({ blockNumber: 1000n, stateRoot: "0xvalidroot" }),
     ),
-    isValidStateRoot: mock((root: string) => Promise.resolve(validRoots.has(root))),
+    isValidStateRoot: mock((root: string, _blockNumber: bigint) => Promise.resolve(validRoots.has(root))),
   } as unknown as StateRootOracle;
 }
 
@@ -70,6 +70,7 @@ describe("EthBalanceModule", () => {
         epoch: module.currentEpoch(),
         minBalance: MIN_BALANCE_WEI.toString(),
         nullifier: "0xnullifier123",
+        blockNumber: "1000",
       };
     }
 
@@ -92,7 +93,7 @@ describe("EthBalanceModule", () => {
       inputs.stateRoot = "0xstaleroot";
       const result = await module.validatePublicInputs(inputs);
       expect(result.valid).toBe(false);
-      expect(result.error).toContain("not recognized or too old");
+      expect(result.error).toContain("does not match the given block");
     });
 
     test("rejects min balance below threshold", async () => {
@@ -189,10 +190,11 @@ describe("EthBalanceModule", () => {
         epoch: strictModule.currentEpoch(),
         minBalance: MIN_BALANCE_WEI.toString(),
         nullifier: "0xnullifier123",
+        blockNumber: "1000",
       };
       const result = await strictModule.validatePublicInputs(inputs);
       expect(result.valid).toBe(false);
-      expect(result.error).toContain("not recognized");
+      expect(result.error).toContain("does not match");
     });
   });
 
@@ -203,6 +205,7 @@ describe("EthBalanceModule", () => {
         epoch: 2928,
         minBalance: "10000000000000000",
         nullifier: "0x" + "cd".repeat(32),
+        blockNumber: "1000",
       };
       const fields = encodePublicInputs(inputs);
       expect(fields.length).toBe(35);
@@ -215,6 +218,7 @@ describe("EthBalanceModule", () => {
         epoch: 1,
         minBalance: "1",
         nullifier: "0x01",
+        blockNumber: "1000",
       };
       const fields = encodePublicInputs(inputs);
       // First byte is 0x01
@@ -231,6 +235,7 @@ describe("EthBalanceModule", () => {
         epoch: 2928,
         minBalance: "10000000000000000",
         nullifier: "0x" + "ab".repeat(32),
+        blockNumber: "1000",
       };
       const fields = encodePublicInputs(inputs);
       // epoch (field 32): 2928 = 0xb70
@@ -269,6 +274,7 @@ describe("EthBalanceModule", () => {
             epoch: fixture.epoch,
             minBalance: fixture.minBalance,
             nullifier: fixture.nullifier,
+            blockNumber: "1000",
           });
           expect(result).toBe(true);
         },
@@ -300,6 +306,7 @@ describe("EthBalanceModule", () => {
             epoch: fixture.epoch,
             minBalance: fixture.minBalance,
             nullifier: fixture.nullifier,
+            blockNumber: "1000",
           });
           expect(result).toBe(false);
         },
@@ -329,6 +336,7 @@ describe("EthBalanceModule", () => {
             epoch: fixture.epoch + 1,
             minBalance: fixture.minBalance,
             nullifier: fixture.nullifier,
+            blockNumber: "1000",
           });
           expect(result).toBe(false);
         },

@@ -72,7 +72,7 @@ export function getValidStateRoot(): string {
 
 /**
  * A stale state root that is NOT in the oracle cache, simulating a root
- * from more than 256 blocks ago.
+ * that would not match the valid block number.
  */
 export const STALE_STATE_ROOT =
   "0xffffffffffffffffffffffffffffffff" +
@@ -110,12 +110,16 @@ export function getFixtureEpoch(): number | null {
  * Build valid public inputs for a claim request. Uses the current epoch
  * from the module and the valid (seeded) state root.
  */
+/** The block number the mock oracle accepts. */
+export const VALID_BLOCK_NUMBER = "1000";
+
 export function validPublicInputs(
   epoch: number,
   overrides: Partial<{
     stateRoot: string;
     minBalance: string;
     nullifier: string;
+    blockNumber: string;
   }> = {},
 ) {
   return {
@@ -123,6 +127,7 @@ export function validPublicInputs(
     epoch,
     minBalance: overrides.minBalance ?? MIN_BALANCE_WEI,
     nullifier: overrides.nullifier ?? uniqueNullifier(),
+    blockNumber: overrides.blockNumber ?? VALID_BLOCK_NUMBER,
   };
 }
 
@@ -137,6 +142,7 @@ export function claimBody(
     stateRoot: string;
     minBalance: string;
     nullifier: string;
+    blockNumber: string;
     recipient: string;
     targetNetwork: string;
   }> = {},
@@ -145,6 +151,7 @@ export function claimBody(
     stateRoot: overrides.stateRoot,
     minBalance: overrides.minBalance,
     nullifier: overrides.nullifier,
+    blockNumber: overrides.blockNumber,
   });
 
   return {

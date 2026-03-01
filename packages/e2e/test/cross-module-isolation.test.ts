@@ -101,6 +101,7 @@ describe("Cross-module nullifier isolation", () => {
         epoch: currentEpoch,
         minBalance: MIN_BALANCE_WEI,
         nullifier,
+        blockNumber: "1000",
       },
       recipient: TEST_RECIPIENT,
       targetNetwork: TEST_NETWORK,

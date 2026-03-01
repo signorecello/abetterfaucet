@@ -17,6 +17,7 @@ export interface PublicInputs {
   epoch: number;
   minBalance: string;
   nullifier: string;
+  blockNumber: string;
 }
 
 export interface ValidationResult {

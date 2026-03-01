@@ -46,6 +46,7 @@ export function createClaimRouter(deps: ClaimDeps): Hono {
       epoch: publicInputs.epoch,
       minBalance: publicInputs.minBalance,
       nullifier: publicInputs.nullifier,
+      blockNumber: publicInputs.blockNumber,
     };
 
     const t1 = performance.now();

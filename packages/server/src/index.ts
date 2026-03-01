@@ -62,13 +62,11 @@ function getRateLimitKey(c: { req: { header: (name: string) => string | undefine
 
 // Origin chains + state root oracles
 const originChains = loadOriginChains();
-const oracles: StateRootOracle[] = [];
 const registry = new ModuleRegistry();
 
 for (const oc of originChains) {
   const client = createPublicClient({ chain: oc.chain, transport: http(oc.rpcUrl) });
-  const oracle = new StateRootOracle(client, logger, undefined, oc.blockTimeMs);
-  oracles.push(oracle);
+  const oracle = new StateRootOracle(client, logger);
 
   registry.register(
     new EthBalanceModule(oracle, {
@@ -170,15 +168,6 @@ app.get("*", async (c) => {
   return c.notFound();
 });
 
-// Start all oracles
-for (const oracle of oracles) {
-  oracle.start().then(() => {
-    logger.info("State root oracle started");
-  }).catch((err) => {
-    logger.warn({ err }, "State root oracle failed to start (will retry on next interval)");
-  });
-}
-
 // Initialize verification key before starting server (blocks startup to prevent
 // claims arriving before the VK is ready — first run takes ~80s without cache)
 const vkStart = performance.now();
@@ -213,7 +202,6 @@ const server = Bun.serve({
 
 const shutdown = () => {
   logger.info("Shutting down...");
-  for (const oracle of oracles) oracle.stop();
   clearInterval(rateLimitCleanupInterval);
   clearInterval(nullifierPruneInterval);
   nullifierStore.close();

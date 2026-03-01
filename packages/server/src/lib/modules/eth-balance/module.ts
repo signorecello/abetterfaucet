@@ -55,12 +55,12 @@ export class EthBalanceModule implements ProofModule {
       };
     }
 
-    // Verify the state root is recent and valid
-    const isValid = await this.oracle.isValidStateRoot(inputs.stateRoot);
+    // Verify the state root matches the given block and is recent
+    const isValid = await this.oracle.isValidStateRoot(inputs.stateRoot, BigInt(inputs.blockNumber));
     if (!isValid) {
       return {
         valid: false,
-        error: "State root is not recognized or too old (> 256 blocks)",
+        error: "State root does not match the given block or block is too old (> 30 minutes)",
       };
     }
 

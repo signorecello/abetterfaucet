@@ -56,6 +56,7 @@ function validClaimBody() {
       epoch: 100,
       minBalance: "10000000000000000",
       nullifier: "0x" + "cd".repeat(32),
+      blockNumber: "1000",
     },
     recipient: "0x" + "11".repeat(20),
     targetNetwork: "sepolia",

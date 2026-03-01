@@ -47,7 +47,7 @@ class MockStateRootOracle {
     return { blockNumber: 1000n, stateRoot: getValidStateRoot() };
   }
 
-  async isValidStateRoot(stateRoot: string): Promise<boolean> {
+  async isValidStateRoot(stateRoot: string, _blockNumber: bigint): Promise<boolean> {
     return this.validRoots.has(stateRoot);
   }
 }

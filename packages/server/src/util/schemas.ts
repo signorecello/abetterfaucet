@@ -16,6 +16,7 @@ export const PublicInputsSchema = v.object({
   epoch: v.pipe(v.number(), v.integer(), v.minValue(0)),
   minBalance: v.string(),
   nullifier: HexSchema,
+  blockNumber: v.pipe(v.string(), v.regex(/^\d+$/, "Must be a decimal block number string")),
 });
 
 export const ClaimRequestSchema = v.object({

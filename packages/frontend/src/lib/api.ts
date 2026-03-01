@@ -28,6 +28,7 @@ export interface ClaimRequest {
     epoch: number;
     minBalance: string;
     nullifier: string;
+    blockNumber: string;
   };
   recipient: string;
   targetNetwork: string;
