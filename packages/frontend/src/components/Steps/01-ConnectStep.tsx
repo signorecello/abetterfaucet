@@ -68,6 +68,11 @@ export function ConnectStep({ modules, selectedModuleId, onModuleChange, onConti
   if (!isConnected || !address) {
     return (
       <div>
+        <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
+          Connect the <strong>mainnet wallet</strong> you want to prove balance for.
+          Your address and balance will never leave your device. They are only used
+          locally to generate a zero-knowledge proof.
+        </p>
         <button
           className="btn btn-secondary"
           onClick={() => open()}
@@ -120,6 +125,10 @@ export function ConnectStep({ modules, selectedModuleId, onModuleChange, onConti
           ))}
         </div>
       )}
+
+      <p className="text-sm text-muted" style={{ marginTop: 12, marginBottom: 12 }}>
+        Your address and balance stay private. They never leave your browser.
+      </p>
 
       {allLoaded && !anyChainSufficient && (
         <div className="message message-error" style={{ marginBottom: 12 }}>

@@ -44,6 +44,10 @@ export function ClaimStep({
     <div>
       <div className="form-group">
         <label htmlFor="recipient-input">Recipient Address</label>
+        <p className="text-sm text-muted" style={{ margin: '0 0 8px' }}>
+          Enter the <strong>testnet address</strong> where you want to receive funds.
+          This address will not be linked to your mainnet wallet in any way.
+        </p>
         <input
           type="text"
           id="recipient-input"

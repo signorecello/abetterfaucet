@@ -60,8 +60,17 @@ export function App() {
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
               </a>
+              <a href="https://linktr.ee/zkpedro" target="_blank" rel="noopener noreferrer" aria-label="Linktree">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7.953 15.066l-.038-4.094-4.86-.002.002-2.97 4.86.002L3.954 3.94l2.14-2.122L10.14 5.96l4.047-4.14 2.14 2.122-3.964 4.062 4.86-.002-.002 2.97-4.86.002.04 4.094H9.994l-.04-4.094zm4.407 3.477H11.64V24h2.72v-5.457z"/>
+                </svg>
+              </a>
             </div>
-            <p>built by <span className="text-accent">zkpedro</span> with Noir, Hono and Bun</p>
+            <p>built by <a href="https://linktr.ee/zkpedro" target="_blank" rel="noopener noreferrer" className="text-accent">zkpedro</a> with Noir, Hono and Bun</p>
+            <div className="footer-sponsor">
+              <p>like my work? sponsor it on GitHub</p>
+              <iframe src="https://github.com/sponsors/signorecello/button" title="Sponsor signorecello" height="32" width="114" style={{ border: 0, borderRadius: 6 }} />
+            </div>
           </footer>
         </div>
       </QueryClientProvider>
