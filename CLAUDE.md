@@ -1,4 +1,4 @@
-# zk_faucet
+# A Better Faucet
 
 Privacy-preserving testnet faucet using ZK storage proofs. Users prove they hold sufficient ETH on a configurable origin chain via a Noir ZK circuit, then receive testnet funds at a different address with no link between identities.
 

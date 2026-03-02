@@ -1,6 +1,6 @@
-# zk_faucet
+# A Better Faucet
 
-![zk_faucet](./img/demo.png)
+![A Better Faucet](./img/demo.png)
 
 A privacy-preserving testnet faucet that uses zero-knowledge storage proofs to verify ETH balances on a configurable origin chain without revealing user identity.
 
@@ -206,8 +206,8 @@ See `SECURITY.md` for the full audit findings, including accepted risks and thei
 ### Installation
 
 ```bash
-git clone https://github.com/your-org/zk_faucet.git
-cd zk_faucet
+git clone https://github.com/signorecello/abetterfaucet.git
+cd abetterfaucet
 bun install
 ```
 
@@ -338,8 +338,8 @@ docker compose up -d --build
 
 ```bash
 # On the server
-git clone <your-repo> /opt/zk-faucet
-cd /opt/zk-faucet
+git clone <your-repo> /opt/abetterfaucet
+cd /opt/abetterfaucet
 
 # Create production .env files
 cat > .env << 'EOF'
@@ -380,7 +380,7 @@ docker compose logs -f
 #### Updating
 
 ```bash
-cd /opt/zk-faucet
+cd /opt/abetterfaucet
 git pull
 docker compose up -d --build
 ```

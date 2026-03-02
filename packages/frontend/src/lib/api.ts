@@ -1,4 +1,4 @@
-// API client for zk_faucet server
+// API client for A Better Faucet server
 
 export interface Network {
   id: string;

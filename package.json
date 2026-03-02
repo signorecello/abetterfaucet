@@ -1,5 +1,5 @@
 {
-  "name": "zk-faucet",
+  "name": "abetterfaucet",
   "private": true,
   "workspaces": [
     "packages/*"

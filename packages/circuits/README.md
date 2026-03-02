@@ -1,6 +1,6 @@
-# @zk-faucet/circuits
+# @abetterfaucet/circuits
 
-Noir ZK circuits for the zk_faucet project.
+Noir ZK circuits for A Better Faucet.
 
 ## Structure
 
@@ -86,7 +86,7 @@ Proves that a user controls an Ethereum address with >= `min_balance` ETH and de
 ```bash
 cd eth_balance && nargo compile
 # Or from project root:
-bun run --filter '@zk-faucet/circuits' compile
+bun run --filter '@abetterfaucet/circuits' compile
 ```
 
 ### Test
@@ -94,7 +94,7 @@ bun run --filter '@zk-faucet/circuits' compile
 ```bash
 cd eth_balance && nargo test
 # Or:
-bun run --filter '@zk-faucet/circuits' test
+bun run --filter '@abetterfaucet/circuits' test
 ```
 
 ### Generate Witness Inputs

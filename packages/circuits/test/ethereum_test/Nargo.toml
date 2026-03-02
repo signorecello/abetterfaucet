@@ -1,7 +1,7 @@
 [package]
 name = "ethereum_test"
 type = "bin"
-authors = ["zk_faucet"]
+authors = ["abetterfaucet"]
 compiler_version = ">=1.0.0"
 
 [dependencies]

@@ -24,7 +24,7 @@ async function checkNargo(): Promise<boolean> {
 }
 
 async function compile() {
-  console.log("=== zk_faucet circuit compiler ===\n");
+  console.log("=== A Better Faucet circuit compiler ===\n");
 
   const hasNargo = await checkNargo();
   if (!hasNargo) {

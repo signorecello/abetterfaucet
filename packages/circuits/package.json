@@ -1,5 +1,5 @@
 {
-  "name": "@zk-faucet/circuits",
+  "name": "@abetterfaucet/circuits",
   "private": true,
   "scripts": {
     "compile": "bun run storage_proof_test:generate && bun run eth_balance:generate",
