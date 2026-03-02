@@ -71,10 +71,11 @@ body {
   margin-bottom: 4px;
 }
 
-.header p {
+.header .subtitle {
   font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 300;
+  letter-spacing: 0;
 }
 
 /* Cards */

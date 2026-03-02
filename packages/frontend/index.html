@@ -6,6 +6,7 @@
   <title>a better faucet — Privacy-Preserving Testnet Faucet</title>
   <meta name="description" content="Claim testnet ETH without revealing your mainnet identity. Prove your balance with a ZK storage proof and receive funds at a fresh address." />
   <meta name="theme-color" content="#4a7dfc" />
+  <link rel="canonical" href="https://abetterfaucet.xyz/" />
   <meta property="og:title" content="A Better Faucet — Private Testnet ETH with ZK Proofs" />
   <meta property="og:description" content="Claim testnet ETH without revealing your mainnet identity. Prove your balance with a ZK storage proof and receive funds at a fresh address." />
   <meta property="og:type" content="website" />
@@ -13,16 +14,57 @@
   <meta property="og:image" content="https://abetterfaucet.xyz/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="A Better Faucet" />
+  <meta property="og:locale" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="A Better Faucet — Private Testnet ETH with ZK Proofs" />
   <meta name="twitter:description" content="Claim testnet ETH without revealing your mainnet identity. Prove your balance with a ZK storage proof and receive funds at a fresh address." />
   <meta name="twitter:image" content="https://abetterfaucet.xyz/og-image.png" />
+  <meta name="twitter:site" content="@zkpedrongmi" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="/src/styles.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "A Better Faucet",
+    "url": "https://abetterfaucet.xyz",
+    "description": "Privacy-preserving testnet faucet powered by ZK proofs. Claim testnet ETH without revealing your mainnet identity.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "zkpedro",
+      "url": "https://linktr.ee/zkpedro"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="root"></div>
+  <noscript>
+    <div style="max-width:600px;margin:2rem auto;padding:1rem;font-family:system-ui,sans-serif;color:#e0e0e0">
+      <h1>A Better Faucet</h1>
+      <p>Privacy-preserving testnet faucet powered by ZK proofs. Claim testnet ETH without revealing your mainnet identity.</p>
+      <h2>How it works</h2>
+      <ol>
+        <li><strong>Connect your wallet</strong> &mdash; prove you hold enough ETH on mainnet.</li>
+        <li><strong>Generate a ZK proof</strong> &mdash; your proof is created entirely in your browser. Private data never leaves your device.</li>
+        <li><strong>Claim testnet ETH</strong> &mdash; receive funds at a fresh address with no on-chain link to your mainnet identity.</li>
+      </ol>
+      <p>This application requires JavaScript to generate zero-knowledge proofs in your browser.</p>
+      <p><a href="https://github.com/signorecello/abetterfaucet">View source on GitHub</a></p>
+    </div>
+  </noscript>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

@@ -32,8 +32,7 @@ export function App() {
       <QueryClientProvider client={queryClient}>
         <div className="app">
           <header className="header">
-            <h1>a better faucet</h1>
-            <p>privacy-preserving testnet faucet powered by ZK proofs</p>
+            <h1>a better faucet <span className="subtitle">— privacy-preserving testnet faucet powered by ZK proofs</span></h1>
           </header>
 
           <FaucetInfo />

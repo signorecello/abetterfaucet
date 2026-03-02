@@ -157,6 +157,12 @@ app.route("/health", createHealthRouter({ registry, dispatcher, startTime }));
 // --- Serve frontend static files ---
 const frontendDir = new URL("../../frontend/dist", import.meta.url).pathname;
 
+// Cache hashed assets immutably
+app.use("/assets/*", async (c, next) => {
+  await next();
+  c.header("Cache-Control", "public, max-age=31536000, immutable");
+});
+
 // Serve static files (assets, favicon, og-image, etc.) from the frontend dist directory.
 // serveStatic tries to match a file on disk first; if no file exists, it falls through
 // to the SPA catch-all below which returns index.html.
@@ -166,6 +172,7 @@ app.get("*", async (c) => {
   const file = Bun.file(`${frontendDir}/index.html`);
   if (await file.exists()) {
     const html = await file.text();
+    c.header("Cache-Control", "no-cache");
     return c.html(html);
   }
   return c.notFound();
