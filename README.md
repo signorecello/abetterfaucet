@@ -2,8 +2,6 @@
 
 ![A Better Faucet](./img/demo.png)
 
-<a href="https://github.com/sponsors/signorecello"><img src="https://img.shields.io/github/sponsors/signorecello?label=Sponsor&logo=github" alt="Sponsor" /></a>
-
 A privacy-preserving testnet faucet that uses zero-knowledge storage proofs to verify ETH balances on a configurable origin chain without revealing user identity.
 
 Users prove they hold sufficient ETH on the origin chain (configured via `ORIGIN_CHAINID`) by generating a ZK proof over their account's Merkle-Patricia Trie (MPT) inclusion in the state trie. The faucet server verifies the proof and sends testnet ETH to a completely separate recipient address. At no point does the server learn which address generated the proof.
